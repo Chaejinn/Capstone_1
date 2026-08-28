@@ -1,0 +1,22 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "GitHub 자동 동기화",
+      "type": "shell",
+      "command": "${workspaceFolder}/scripts/auto-git-sync.sh",
+      "isBackground": true,
+      "runOptions": {
+        "runOn": "folderOpen",
+        "instanceLimit": 1
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "never",
+        "panel": "dedicated",
+        "showReuseMessage": false,
+        "clear": false
+      }
+    }
+  ]
+}
