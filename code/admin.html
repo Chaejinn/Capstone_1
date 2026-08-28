@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Drown Guardian · 관리자 패널</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/common.css">
+<link rel="stylesheet" href="css/admin.css">
+<style>body{overflow:hidden; height:100vh;}</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="topbar">
+    <div class="brand"><div class="dot" style="background:var(--red); box-shadow:0 0 8px 2px rgba(255,90,90,.6);"></div>Drown Guardian <small>관리자 패널</small></div>
+    <div class="top-mid">
+      <span id="clock">--:--:--</span>
+      <span>·</span>
+      <span>플랫폼 전역 관리</span>
+    </div>
+    <div class="top-right">
+      <span class="mode-badge admin">🛡 관리자</span>
+      <a href="site-select.html" class="btn" style="padding:5px 12px; font-size:11px; text-decoration:none;">운영 화면 보기</a>
+      <span id="userLabel">관리자</span>
+      <button class="btn" style="padding:5px 12px; font-size:11px;" id="logoutBtn">로그아웃</button>
+    </div>
+  </div>
+
+  <div class="sidenav">
+    <button class="nav-btn active" data-view="overview" onclick="switchView('overview')">
+      <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>개요
+    </button>
+    <button class="nav-btn" data-view="users" onclick="switchView('users')">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>계정
+    </button>
+    <button class="nav-btn" data-view="sites" onclick="switchView('sites')">
+      <svg viewBox="0 0 24 24"><path d="M12 21s7-6.5 7-12a7 7 0 10-14 0c0 5.5 7 12 7 12z"/><circle cx="12" cy="9" r="2.3"/></svg>사이트
+    </button>
+    <button class="nav-btn" data-view="config" onclick="switchView('config')">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.9l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.9-.3 1.7 1.7 0 00-1 1.6V21a2 2 0 01-4 0v-.1a1.7 1.7 0 00-1-1.6 1.7 1.7 0 00-1.9.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.9 1.7 1.7 0 00-1.6-1H3a2 2 0 010-4h.1a1.7 1.7 0 001.6-1 1.7 1.7 0 00-.3-1.9l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.9.3H9a1.7 1.7 0 001-1.6V3a2 2 0 014 0v.1a1.7 1.7 0 001 1.6 1.7 1.7 0 001.9-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.9V9a1.7 1.7 0 001.6 1H21a2 2 0 010 4h-.1a1.7 1.7 0 00-1.6 1z"/></svg>설정
+    </button>
+    <button class="nav-btn" data-view="audit" onclick="switchView('audit')">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>로그
+    </button>
+  </div>
+
+  <!-- ============ OVERVIEW ============ -->
+  <div class="view" id="view-overview">
+    <div class="section-title">관리자 개요</div>
+    <div class="section-sub">플랫폼 전체 계정·사이트·활동 현황입니다.</div>
+    <div class="admin-ribbon">🛡 <b>관리자 모드</b>로 접속 중입니다 — 이 영역의 변경 사항은 모든 운영자에게 즉시 반영됩니다.</div>
+    <div class="kpi-row">
+      <div class="kpi-card"><div class="kpi-label">운영자 계정</div><div class="kpi-value" id="kpiUsers">0</div></div>
+      <div class="kpi-card"><div class="kpi-label">등록 사이트</div><div class="kpi-value" id="kpiSites">0</div></div>
+      <div class="kpi-card"><div class="kpi-label">활성 사이트</div><div class="kpi-value" id="kpiSitesActive">0</div></div>
+      <div class="kpi-card"><div class="kpi-label">총 감사 로그</div><div class="kpi-value" id="kpiAudit">0</div></div>
+    </div>
+    <div class="card">
+      <h3>최근 활동 <span class="tag">최신 8건</span></h3>
+      <div class="audit-list" id="recentAudit"></div>
+    </div>
+  </div>
+
+  <!-- ============ USERS ============ -->
+  <div class="view" id="view-users" hidden>
+    <div class="section-title">운영자 계정 관리</div>
+    <div class="section-sub">여기서 추가한 계정은 즉시 <span class="mono">index.html</span> 로그인에서 사용할 수 있습니다.</div>
+    <div class="card">
+      <table class="user-table">
+        <thead><tr><th>아이디</th><th>이름</th><th>권한</th><th>상태</th><th></th></tr></thead>
+        <tbody id="userTableBody"></tbody>
+      </table>
+      <div class="add-user-form">
+        <input class="uname mono" id="newUserId" type="text" placeholder="아이디">
+        <input class="upw mono" id="newUserPw" type="text" placeholder="비밀번호">
+        <input class="udisp mono" id="newUserName" type="text" placeholder="표시 이름">
+        <button class="btn primary" onclick="addUser()">계정 추가</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ SITES ============ -->
+  <div class="view" id="view-sites" hidden>
+    <div class="section-title">사이트 관리</div>
+    <div class="section-sub">사이트를 활성화/비활성화하면 운영자의 사이트 선택 화면에 즉시 반영됩니다.</div>
+    <div class="card" id="siteManageCard"></div>
+  </div>
+
+  <!-- ============ GLOBAL CONFIG ============ -->
+  <div class="view" id="view-config" hidden>
+    <div class="section-title">전역 판정 설정</div>
+    <div class="section-sub">모든 사이트의 관제 대시보드가 시작 시 불러오는 기본 임계값입니다.</div>
+    <div class="card" style="max-width:460px; margin-bottom:20px;">
+      <div class="field">
+        <label>기본 판정 신뢰도 임계값 <b id="gConfLbl">0.90</b></label>
+        <input type="range" min="0.5" max="0.99" step="0.01" value="0.90" id="gConf" oninput="updateGlobal()">
+      </div>
+      <div class="field">
+        <label>기본 지속 프레임 수(N) <b id="gFrLbl">15 프레임</b></label>
+        <input type="range" min="5" max="30" step="1" value="15" id="gFr" oninput="updateGlobal()">
+      </div>
+      <div class="mono" style="font-size:10.5px; color:var(--text-2);" id="gSavedNote">변경 사항은 자동 저장됩니다.</div>
+    </div>
+
+    <div class="section-title" style="font-size:16px;">위험 구역</div>
+    <div class="danger-zone">
+      <div class="dz-row">
+        <div><div class="dz-label">모든 세션 로그아웃</div><div class="dz-desc">현재 이 브라우저의 로그인 세션을 종료합니다.</div></div>
+        <button class="btn danger" onclick="dangerLogoutAll()">세션 종료</button>
+      </div>
+      <div class="dz-row">
+        <div><div class="dz-label">감사 로그 초기화</div><div class="dz-desc">저장된 감사 로그를 모두 삭제합니다.</div></div>
+        <button class="btn danger" onclick="dangerClearAudit()">로그 초기화</button>
+      </div>
+      <div class="dz-row">
+        <div><div class="dz-label">플랫폼 초기화</div><div class="dz-desc">계정·사이트·설정·로그를 모두 공장 기본값으로 되돌립니다.</div></div>
+        <button class="btn danger" onclick="dangerFactoryReset()">전체 초기화</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ AUDIT ============ -->
+  <div class="view" id="view-audit" hidden>
+    <div class="section-title">감사 로그</div>
+    <div class="section-sub">로그인·로그아웃·계정/사이트 변경·비상정지 등 모든 활동 이력입니다.</div>
+    <div class="card">
+      <h3>전체 로그 <span class="tag" id="auditCount">0건</span></h3>
+      <div class="audit-list" id="auditList" style="max-height:420px;"></div>
+      <div class="sim-controls" style="margin-top:12px;">
+        <button class="btn" onclick="exportAudit()">⤓ 로그 내보내기(.txt)</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="js/auth.js"></script>
+<script src="js/admin.js"></script>
+</body>
+</html>

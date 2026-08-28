@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Drown Guardian · 회원가입</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/common.css">
+<link rel="stylesheet" href="css/login.css">
+</head>
+<body class="platform-body">
+
+  <div class="platform-brand"><div class="dot"></div>Drown Guardian <small>PLATFORM</small></div>
+
+  <div class="login-card">
+    <div class="login-eyebrow">운영자 회원가입</div>
+    <div class="login-title">계정 만들기</div>
+    <div class="login-sub">가입 즉시 운영자 권한으로 관제 플랫폼을 이용할 수 있습니다.</div>
+
+    <div class="login-error" id="signupError">오류가 발생했습니다.</div>
+
+    <div class="field-group">
+      <label>이름</label>
+      <input type="text" id="suName" placeholder="이름을 입력하세요" autocomplete="name">
+    </div>
+    <div class="field-group">
+      <label>아이디</label>
+      <input type="text" id="suId" placeholder="4자 이상, 영문/숫자" autocomplete="username">
+    </div>
+    <div class="field-group">
+      <label>비밀번호</label>
+      <input type="password" id="suPw" placeholder="6자 이상" autocomplete="new-password">
+    </div>
+    <div class="field-group">
+      <label>비밀번호 확인</label>
+      <input type="password" id="suPw2" placeholder="비밀번호를 한번 더 입력하세요" autocomplete="new-password">
+    </div>
+    <button class="login-btn" id="signupBtn">가입하고 시작하기</button>
+
+    <div class="login-foot">
+      <a href="index.html">← 이미 계정이 있으신가요? 로그인</a>
+    </div>
+
+    <div class="demo-hint">
+      가입한 계정은 관리자 패널의 계정 관리 목록에 즉시 표시되며, 관리자가 언제든
+      비활성화·삭제할 수 있습니다.
+    </div>
+  </div>
+
+<script src="js/auth.js"></script>
+<script src="js/js/signup.js"></script>
+</body>
+</html>

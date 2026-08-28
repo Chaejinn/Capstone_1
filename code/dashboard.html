@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Drown Guardian · 관제 대시보드</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/common.css">
+<link rel="stylesheet" href="css/dashboard.css">
+<style>body{overflow:hidden; height:100vh;}</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="topbar">
+    <div class="brand"><div class="dot"></div>Drown Guardian <small>관제 시스템</small></div>
+    <div class="top-mid">
+      <span id="clock">--:--:--</span>
+      <span>·</span>
+      <span id="siteLabel">사이트</span>
+    </div>
+    <div class="top-right">
+      <span id="modeBadge" class="mode-badge">자율 모드</span>
+      <a href="admin.html" id="adminLink" class="btn" style="display:none; padding:5px 12px; font-size:11px; text-decoration:none;">🛡 관리자 패널</a>
+      <a href="site-select.html" class="btn" style="padding:5px 12px; font-size:11px; text-decoration:none;">사이트 변경</a>
+      <span id="userLabel">사용자</span>
+      <button class="btn" style="padding:5px 12px; font-size:11px;" id="logoutBtn">로그아웃</button>
+    </div>
+  </div>
+
+  <div class="sidenav">
+    <button class="nav-btn active" data-view="control" onclick="switchView('control')">
+      <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>관제
+    </button>
+    <button class="nav-btn" data-view="events" onclick="switchView('events')">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>이벤트
+    </button>
+    <button class="nav-btn" data-view="settings" onclick="switchView('settings')">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.9l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.9-.3 1.7 1.7 0 00-1 1.6V21a2 2 0 01-4 0v-.1a1.7 1.7 0 00-1-1.6 1.7 1.7 0 00-1.9.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.9 1.7 1.7 0 00-1.6-1H3a2 2 0 010-4h.1a1.7 1.7 0 001.6-1 1.7 1.7 0 00-.3-1.9l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.9.3H9a1.7 1.7 0 001-1.6V3a2 2 0 014 0v.1a1.7 1.7 0 001 1.6 1.7 1.7 0 001.9-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.9V9a1.7 1.7 0 001.6 1H21a2 2 0 010 4h-.1a1.7 1.7 0 00-1.6 1z"/></svg>설정
+    </button>
+    <button class="nav-btn" data-view="system" onclick="switchView('system')">
+      <svg viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>상태
+    </button>
+  </div>
+
+  <!-- ============ CONTROL VIEW ============ -->
+  <div class="view" id="view-control">
+    <div class="section-title">관제 대시보드</div>
+    <div class="section-sub">감지 → 판단 → 개입 파이프라인을 실시간으로 시뮬레이션합니다. '시뮬레이션 시작'을 눌러 흐름을 확인하세요.</div>
+
+    <div class="control-grid">
+      <div>
+        <div class="card">
+          <h3>감지 카메라 <span class="tag">CAM-01 · 1920×1080 · 30fps</span></h3>
+          <div class="video-panel" id="videoPanel">
+            <div class="live-badge">LIVE</div>
+            <div class="ir-badge" id="irBadge" style="display:none;">IR</div>
+            <div id="alertBanner" class="alert-banner" style="display:none;">
+              <span id="alertText">⚠ 익수 감지 — ID 02</span>
+              <span id="alertConf" class="mono">신뢰도 0%</span>
+            </div>
+            <svg id="roiSvgControl" viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute; inset:0; width:100%; height:100%; z-index:2; pointer-events:none;">
+              <polygon id="roiPolyControl" points="" fill="rgba(141,160,188,0.05)" stroke="rgba(141,160,188,0.5)" stroke-width="0.4" stroke-dasharray="2,1.5"/>
+            </svg>
+            <div id="targetBox" class="det-box" style="display:none;"><span class="lbl" id="targetLbl">후보</span></div>
+            <div id="boardIcon" class="board-icon" style="left:15%; top:78%;">
+              <svg viewBox="0 0 24 24" fill="none"><path d="M3 15 L21 15 L18 21 L6 21 Z" fill="var(--teal)"/><rect x="10" y="6" width="4" height="9" fill="var(--teal)"/></svg>
+            </div>
+            <div class="readout" id="videoReadout">FPS 29.8 · DROP 0.2%</div>
+            <div id="estopOverlay" class="estop-banner" style="display:none;">
+              <div style="font-size:26px;">🛑</div>
+              <div style="font-size:14px; font-weight:700;">비상정지 활성 — 모든 추진 정지</div>
+              <div style="font-size:11px; color:var(--text-2);">FR-SAF-004 · 명령 우선순위 최상위 처리</div>
+              <button onclick="clearEstop()">비상정지 해제 · 복귀</button>
+            </div>
+          </div>
+
+          <div class="sim-controls">
+            <button class="btn primary" id="startBtn" onclick="startSim()">▶ 시뮬레이션 시작</button>
+            <button class="btn" id="pauseBtn" onclick="pauseSim()" disabled>일시정지</button>
+            <button class="btn" onclick="resetSim()">↺ 리셋</button>
+            <div class="spacer"></div>
+            <div class="switch-wrap">
+              자율<div class="switch" id="modeSwitch" onclick="toggleMode()"></div>수동
+            </div>
+            <button class="estop-btn" onclick="triggerEstop()">STOP</button>
+          </div>
+
+          <div id="manualPanel" style="display:none; margin-top:14px; border-top:1px solid var(--line-soft); padding-top:12px;">
+            <h3 style="margin-bottom:8px;">가상 조이스틱 <span class="tag">FR-SAF-002</span></h3>
+            <div style="display:flex; gap:24px; align-items:center; flex-wrap:wrap;">
+              <div class="manual-pad">
+                <span></span><button class="pad-btn" onclick="manualMove(0,-1)">▲</button><span></span>
+                <button class="pad-btn" onclick="manualMove(-1,0)">◀</button><span></span><button class="pad-btn" onclick="manualMove(1,0)">▶</button>
+                <span></span><button class="pad-btn" onclick="manualMove(0,1)">▼</button><span></span>
+              </div>
+              <button class="btn" onclick="forceDeploy()">🎈 부력체 강제 전개 (FR-SAF-003)</button>
+              <span class="mono" style="font-size:11px; color:var(--text-2);">수동 명령이 자율 명령보다 항상 우선 처리됩니다.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="side-col">
+        <div class="card">
+          <h3>온보드 카메라 <span class="tag">BOARD-01</span></h3>
+          <div class="mini-cam"><span class="lb">◉ 온보드 영상</span>보드 전방 뷰 스트리밍 중</div>
+        </div>
+
+        <div class="card">
+          <h3>구조보드 상태</h3>
+          <div class="stat-row"><span class="k">동작 모드</span><span class="v" id="statMode">자율</span></div>
+          <div class="stat-row"><span class="k">표적까지 거리</span><span class="v" id="statDist">— m</span></div>
+          <div class="stat-row"><span class="k">속도</span><span class="v" id="statSpeed">0.0 m/s</span></div>
+          <div class="stat-row"><span class="k">배터리</span><span class="v" id="statBatt">87%</span></div>
+          <div class="bar-track"><div class="bar-fill" id="battBar" style="width:87%;"></div></div>
+          <div style="margin-top:10px; font-size:11px; color:var(--text-2); font-family:'JetBrains Mono',monospace;">진행 단계</div>
+          <div class="stepper2" id="stepper">
+            <div class="seg" data-s="0"></div><div class="seg" data-s="1"></div><div class="seg" data-s="2"></div><div class="seg" data-s="3"></div><div class="seg" data-s="4"></div>
+          </div>
+          <div style="display:flex; justify-content:space-between; font-size:9.5px; color:var(--text-2); margin-top:4px; font-family:'JetBrains Mono',monospace;">
+            <span>감지</span><span>출동</span><span>접근</span><span>정렬</span><span>전개</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>이벤트 로그 <span class="tag" id="logCount">0건</span></h3>
+          <div class="log-list" id="logList"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ EVENTS VIEW ============ -->
+  <div class="view" id="view-events" hidden>
+    <div class="section-title">이벤트 기록</div>
+    <div class="section-sub">발생한 모든 판정·시스템 이벤트의 전체 타임라인입니다. (FR-MON-004/005)</div>
+    <div class="card">
+      <div class="log-list" id="logListFull" style="max-height:none;"></div>
+    </div>
+  </div>
+
+  <!-- ============ SETTINGS VIEW ============ -->
+  <div class="view" id="view-settings" hidden>
+    <div class="section-title">설정</div>
+    <div class="section-sub">감시 ROI, 판정 임계값, 야간 모드, 알림 대상, 개인정보 옵션을 구성합니다.</div>
+
+    <div class="settings-grid">
+      <div class="card">
+        <h3>감시 구역(ROI) 설정 <span class="tag">FR-SUR-002</span></h3>
+        <div class="roi-editor" id="roiEditor">
+          <svg id="roiSvgEdit" viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute; inset:0; width:100%; height:100%;">
+            <polygon id="roiPolyEdit" points="" fill="rgba(45,217,196,0.08)" stroke="var(--teal)" stroke-width="0.5"/>
+          </svg>
+        </div>
+        <div class="sim-controls">
+          <button class="btn" onclick="addRoiPoint()">+ 정점 추가</button>
+          <button class="btn" onclick="resetRoi()">초기화</button>
+        </div>
+
+        <div class="field" style="margin-top:18px;">
+          <label>판정 신뢰도 임계값 <b id="threshConfLbl">0.90</b></label>
+          <input type="range" min="0.5" max="0.99" step="0.01" value="0.90" id="threshConf" oninput="updateThresh()">
+        </div>
+        <div class="field">
+          <label>지속 프레임 수(N) <b id="threshFrLbl">15 프레임</b></label>
+          <input type="range" min="5" max="30" step="1" value="15" id="threshFr" oninput="updateThresh()">
+        </div>
+        <div class="mono" style="font-size:10.5px; color:var(--text-2);">※ 관리자 패널에서 설정한 전역 기본값을 초기값으로 불러옵니다.</div>
+      </div>
+
+      <div>
+        <div class="card" style="margin-bottom:18px;">
+          <h3>야간 모드 <span class="tag">FR-SUR-003</span></h3>
+          <div class="toggle-row"><span>자동 전환</span><div class="switch on" id="nightAutoSwitch" onclick="toggleSwitch('nightAutoSwitch')"></div></div>
+          <div class="field" style="margin-top:14px;">
+            <label>야간 전환 조도 임계값 <b id="luxLbl">35 lux</b></label>
+            <input type="range" min="5" max="100" value="35" id="luxSlider" oninput="document.getElementById('luxLbl').textContent=this.value+' lux'">
+          </div>
+          <div class="toggle-row" style="border-bottom:none;"><span>강제 야간 모드 미리보기</span><div class="switch" id="nightForceSwitch" onclick="toggleNightPreview()"></div></div>
+        </div>
+
+        <div class="card">
+          <h3>개인정보 설정 <span class="tag">NFR-SEC</span></h3>
+          <div class="toggle-row"><span>원본 영상 저장</span><div class="switch" style="pointer-events:none; opacity:.5;"></div></div>
+          <div style="font-size:10.5px; color:var(--text-2); margin-top:-4px; margin-bottom:6px;">NFR-SEC-001에 따라 항상 비활성(엣지 처리 후 폐기)</div>
+          <div class="toggle-row" style="border-bottom:none;"><span>이벤트 프레임 마스킹 보관</span><div class="switch on" id="maskSwitch" onclick="toggleSwitch('maskSwitch')"></div></div>
+        </div>
+      </div>
+
+      <div class="card" style="grid-column:1/3;">
+        <h3>알림 대상 <span class="tag" id="contactCount">3명</span></h3>
+        <div id="contactList"></div>
+        <div class="sim-controls"><button class="btn" onclick="addContact()">+ 관리자 추가</button></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ SYSTEM STATUS VIEW ============ -->
+  <div class="view" id="view-system" hidden>
+    <div class="section-title">시스템 상태</div>
+    <div class="section-sub">배터리·모터·통신·카메라 자기진단 결과입니다. (FR-BAT-001~003, NFR-AVA-001)</div>
+    <button class="btn primary" style="margin-bottom:18px;" onclick="runDiagnostics()">⟳ 자기진단 실행</button>
+    <div class="diag-grid" id="diagGrid"></div>
+  </div>
+
+</div>
+
+<script src="js/auth.js"></script>
+<script src="js/dashboard.js"></script>
+</body>
+</html>
