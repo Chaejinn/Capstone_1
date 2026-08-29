@@ -28,18 +28,6 @@ drown-guardian-platform/
     └── admin.js              관리자 패널 로직 (계정/사이트/설정/로그)
 ```
 
-## VS Code에서 실행하는 방법
-
-1. 이 폴더를 VS Code에서 엽니다: `code drown-guardian-platform`
-2. **Live Server** 확장(ritwickdey.LiveServer)을 설치합니다 (최초 1회).
-3. `index.html`을 열고 우클릭 → **Open with Live Server** 를 선택합니다.
-   (또는 우측 하단 "Go Live" 버튼 클릭)
-4. 브라우저가 자동으로 열리며 로그인 화면이 나타납니다.
-
-> Live Server 없이 실행하려면 터미널에서 `python3 -m http.server 8080` 실행 후
-> `http://localhost:8080` 접속도 가능합니다. (파일을 `file://`로 직접 열면
-> 일부 브라우저에서 fetch/모듈 정책상 문제가 될 수 있어 로컬 서버 사용을 권장합니다.)
-
 ## 계정
 
 | 구분 | 아이디 | 비밀번호 | 이동 경로 |
