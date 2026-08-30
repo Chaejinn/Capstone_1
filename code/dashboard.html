@@ -14,11 +14,16 @@
 <div class="app">
 
   <div class="topbar">
-    <div class="brand"><div class="dot"></div>Drown Guardian <small>관제 시스템</small></div>
+    <div class="brand dashboard-brand">
+      <svg class="brand-shield" viewBox="0 0 48 56" aria-hidden="true"><path d="M24 3 43 10v15c0 13-8 22-19 28C13 47 5 38 5 25V10Z"/><path d="M12 34c5-5 9-5 14 0s9 5 13 0M16 27l5-7 7 5 5-8"/></svg>
+      <span>DROWN GUARDIAN<small>AI 자율 구조 시스템</small></span>
+    </div>
+    <div class="page-identity"><span class="page-icon">⌁</span><div><b>관제 대시보드</b><small>평상시 감시 상태</small></div></div>
     <div class="top-mid">
       <span id="clock">--:--:--</span>
-      <span>·</span>
-      <span id="siteLabel">사이트</span>
+      <span class="weather-chip">☁ 24.6°C</span>
+      <span class="weather-chip">≋ 0.3 m</span>
+      <span id="siteLabel" class="site-chip">사이트</span>
     </div>
     <div class="top-right">
       <span id="modeBadge" class="mode-badge">자율 모드</span>
@@ -46,14 +51,15 @@
 
   <!-- ============ CONTROL VIEW ============ -->
   <div class="view" id="view-control">
-    <div class="section-title">관제 대시보드</div>
-    <div class="section-sub">감지 → 판단 → 개입 파이프라인을 실시간으로 시뮬레이션합니다. '시뮬레이션 시작'을 눌러 흐름을 확인하세요.</div>
+    <div class="section-title control-title">관제 대시보드</div>
+    <div class="section-sub control-title">감지 → 판단 → 개입 파이프라인 실시간 관제</div>
 
     <div class="control-grid">
       <div>
         <div class="card">
           <h3>감지 카메라 <span class="tag">CAM-01 · 1920×1080 · 30fps</span></h3>
           <div class="video-panel" id="videoPanel">
+            <div class="scene-buildings"></div><div class="scene-pier"></div>
             <div class="live-badge">LIVE</div>
             <div class="ir-badge" id="irBadge" style="display:none;">IR</div>
             <div id="alertBanner" class="alert-banner" style="display:none;">
@@ -103,12 +109,12 @@
       </div>
 
       <div class="side-col">
-        <div class="card">
+        <div class="card onboard-card">
           <h3>온보드 카메라 <span class="tag">BOARD-01</span></h3>
-          <div class="mini-cam"><span class="lb">◉ 온보드 영상</span>보드 전방 뷰 스트리밍 중</div>
+          <div class="mini-cam"><span class="lb">● LIVE</span><span class="horizon"></span><span class="onboard-copy">DG-001 전방 스트림</span></div>
         </div>
 
-        <div class="card">
+        <div class="card board-status-card">
           <h3>구조보드 상태</h3>
           <div class="stat-row"><span class="k">동작 모드</span><span class="v" id="statMode">자율</span></div>
           <div class="stat-row"><span class="k">표적까지 거리</span><span class="v" id="statDist">— m</span></div>
@@ -124,10 +130,11 @@
           </div>
         </div>
 
-        <div class="card">
-          <h3>이벤트 로그 <span class="tag" id="logCount">0건</span></h3>
-          <div class="log-list" id="logList"></div>
-        </div>
+      </div>
+
+      <div class="card timeline-card">
+        <h3>◷ 이벤트 타임라인 <span class="tag"><b id="logCount">0건</b> · ● 실시간</span></h3>
+        <div class="log-list" id="logList"></div>
       </div>
     </div>
   </div>
