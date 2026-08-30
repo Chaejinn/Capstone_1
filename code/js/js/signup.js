@@ -24,12 +24,12 @@ function attemptSignup(){
     showError('모든 항목을 입력해주세요.');
     return;
   }
-  if(id.length < 4 || !/^[a-zA-Z0-9_]+$/.test(id)){
-    showError('아이디는 영문/숫자/밑줄로 4자 이상이어야 합니다.');
+  if(id.length < 6 || !/^[a-zA-Z0-9_]+$/.test(id)){
+    showError('아이디는 영문/숫자/밑줄로 6자 이상이어야 합니다.');
     return;
   }
-  if(pw.length < 6){
-    showError('비밀번호는 6자 이상이어야 합니다.');
+  if(pw.length < 8){
+    showError('비밀번호는 8자 이상이어야 합니다.');
     return;
   }
   if(pw !== pw2){
