@@ -14,6 +14,12 @@ const DG = {
     audit:'dg_audit',
   },
   ADMIN: { id:'capstone1', pw:'20262026', name:'시스템 관리자' }, // fixed superuser, not editable via UI
+  SITES: [
+    {id:'chunjeon', name:'금오천 일대', meta:'CAM-01 · BOARD-01 · 실내 수조 실증', status:'운영중', enabled:true},
+    {id:'river-b',  name:'낙동강 체육공원', meta:'다중 노드 확장 · 범위 외 (후속 과제)', status:'준비중', enabled:false},
+    {id:'farm-c',   name:'금호강 낚시스팟', meta:'확장 응용 · 범위 외 (후속 과제)', status:'준비중', enabled:false},
+    {id:'port-d',   name:'선산대교 밑 낚시스팟', meta:'확장 응용 · 범위 외 (후속 과제)', status:'준비중', enabled:false},
+  ],
 };
 
 /* ---------- seed default data on first run ---------- */
@@ -26,12 +32,19 @@ function dgSeed(){
     ]));
   }
   if(!localStorage.getItem(DG.KEYS.sites)){
-    localStorage.setItem(DG.KEYS.sites, JSON.stringify([
-      {id:'chunjeon', name:'금오천 일대', meta:'CAM-01 · BOARD-01 · 실내 수조 실증', status:'운영중', enabled:true},
-      {id:'river-b',  name:'낙동강 체육공원',     meta:'다중 노드 확장 · 범위 외 (후속 과제)', status:'준비중', enabled:false},
-      {id:'farm-c',   name:'금호강 낚시스팟',        meta:'확장 응용 · 범위 외 (후속 과제)',     status:'준비중', enabled:false},
-      {id:'port-d',   name:'선산대교 밑 낚시스팟',     meta:'확장 응용 · 범위 외 (후속 과제)',     status:'준비중', enabled:false},
-    ]));
+    localStorage.setItem(DG.KEYS.sites, JSON.stringify(DG.SITES));
+  } else {
+    // 기존 브라우저에 저장된 활성화 상태는 유지하면서 변경된 사이트명을 반영한다.
+    const sites = JSON.parse(localStorage.getItem(DG.KEYS.sites));
+    const latestNames = Object.fromEntries(DG.SITES.map(site => [site.id, site.name]));
+    let changed = false;
+    sites.forEach(site => {
+      if(latestNames[site.id] && site.name !== latestNames[site.id]){
+        site.name = latestNames[site.id];
+        changed = true;
+      }
+    });
+    if(changed) localStorage.setItem(DG.KEYS.sites, JSON.stringify(sites));
   }
   if(!localStorage.getItem(DG.KEYS.settings)){
     localStorage.setItem(DG.KEYS.settings, JSON.stringify({ threshConf:0.90, threshFrames:15 }));
