@@ -78,3 +78,44 @@
 .diag-card .name{font-size:12.5px; color:var(--text-2); margin-bottom:6px;}
 .diag-card .status{font-family:'JetBrains Mono',monospace; font-size:13.5px; font-weight:700;}
 .status.ok{color:var(--teal);} .status.warn{color:var(--amber);} .status.checking{color:var(--text-2);}
+
+/* reference-driven monitoring layout */
+.control-title{display:none}
+.control-grid{grid-template-columns:minmax(0,1.62fr) minmax(330px,1fr);gap:14px;align-items:stretch}
+.control-grid>div:first-child>.card{height:100%;display:flex;flex-direction:column}
+.video-panel{
+  height:auto;min-height:430px;flex:1;border-radius:4px;border-color:#2b5475;
+  background:
+    linear-gradient(178deg,transparent 0 48%,rgba(108,182,202,.16) 49%,rgba(8,54,75,.35) 58%,rgba(4,21,38,.92) 100%),
+    repeating-linear-gradient(174deg,transparent 0 22px,rgba(93,203,215,.08) 24px,transparent 27px),
+    linear-gradient(#9db5c5 0 27%,#547f91 28%,#1b526a 48%,#08233b 100%);
+  box-shadow:inset 0 0 80px rgba(0,8,20,.5)
+}
+.scene-buildings{position:absolute;left:0;right:0;top:11%;height:18%;opacity:.76;background:repeating-linear-gradient(90deg,#29465a 0 15px,#4f6e7f 16px 28px,#203d51 29px 37px,transparent 38px 44px);clip-path:polygon(0 45%,5% 20%,11% 48%,16% 4%,22% 42%,29% 15%,36% 50%,43% 2%,50% 43%,58% 10%,65% 46%,73% 20%,80% 52%,88% 5%,96% 40%,100% 35%,100% 100%,0 100%)}
+.scene-pier{position:absolute;left:0;right:0;bottom:0;height:21%;background:repeating-linear-gradient(92deg,#2a211d 0 48px,#59443a 49px 52px);clip-path:polygon(40% 35%,100% 0,100% 100%,0 100%,0 87%);border-top:2px solid rgba(192,166,139,.35)}
+.video-panel::after{content:'CAM-01  •  ROI MONITORING';position:absolute;left:14px;bottom:12px;color:#b9e9eb;font:10px 'JetBrains Mono',monospace;z-index:4;letter-spacing:.08em}
+.live-badge{top:12px;left:14px;background:rgba(2,15,28,.78);border:1px solid #2a5671;padding:5px 9px;border-radius:3px}
+.board-icon{width:56px;height:34px;filter:drop-shadow(0 0 8px var(--teal))}.board-icon svg{transform:scaleX(1.8)}
+.readout{background:rgba(2,15,28,.75);padding:5px 8px;border:1px solid #294c68;border-radius:3px}
+.sim-controls{margin-top:12px}.estop-btn{border-radius:6px;width:auto;height:38px;padding:0 18px;background:rgba(255,70,62,.12);color:#ff6961;border:1px solid #b63834}
+.side-col{gap:14px}.onboard-card{flex:1}.onboard-card,.board-status-card{display:flex;flex-direction:column}
+.mini-cam{height:auto;min-height:185px;flex:1;border-radius:4px;overflow:hidden;background:linear-gradient(#7fb3ca 0 35%,#285d72 36%,#092840 100%)}
+.mini-cam::before{content:'';position:absolute;left:0;right:0;top:18%;height:28%;background:repeating-linear-gradient(90deg,#2a4c61 0 18px,#648092 19px 30px,transparent 31px 42px);clip-path:polygon(0 25%,15% 50%,28% 10%,42% 43%,55% 4%,67% 45%,80% 13%,92% 40%,100% 20%,100% 100%,0 100%)}
+.mini-cam::after{content:'DG';position:absolute;bottom:-30px;left:50%;width:170px;height:86px;transform:translateX(-50%);border-radius:55% 55% 0 0;background:#d4a917;color:#17263a;text-align:center;padding-top:20px;font:bold 18px 'Space Grotesk'}
+.mini-cam .lb{top:8px;left:auto;right:10px;z-index:2}.onboard-copy{position:absolute;left:10px;bottom:9px;z-index:2;color:#d5eaf3}.horizon{position:absolute;left:0;right:0;top:46%;border-top:1px solid rgba(154,238,245,.5)}
+.board-status-card .stat-row{padding:8px 2px}.board-status-card .v{color:var(--teal)}
+.timeline-card{grid-column:1/-1;padding-bottom:13px}.timeline-card h3{margin-bottom:10px}.timeline-card h3 .tag{color:var(--teal)}.timeline-card h3 .tag b{color:var(--text-2);font-weight:400}
+.timeline-card .log-list{max-height:none;display:grid;grid-template-columns:repeat(6,minmax(125px,1fr));gap:10px;overflow-x:auto;position:relative;padding:3px 0 12px}
+.timeline-card .log-list::after{content:'';position:absolute;left:12px;right:12px;bottom:3px;border-bottom:2px solid #79a9c8}
+.timeline-card .log-item{min-height:72px;border:1px solid #254662;border-left:1px solid #254662;border-radius:6px;background:rgba(7,28,51,.72);position:relative}.timeline-card .log-item::after{content:'';position:absolute;width:8px;height:8px;border-radius:50%;background:var(--teal);bottom:-18px;left:12px;box-shadow:0 0 8px var(--teal);z-index:2}.timeline-card .log-item.crit{border-color:#8c3939}.timeline-card .log-item.crit::after{background:var(--red);box-shadow:0 0 8px var(--red)}
+
+/* dense settings console */
+#view-settings .section-title{font-size:24px;color:#fff}#view-settings .section-sub{color:var(--teal)}
+.settings-grid{grid-template-columns:minmax(300px,1.2fr) minmax(280px,1fr);gap:12px;align-items:start}
+.settings-grid>.card:first-child{grid-row:span 2}.settings-grid>.card[style*="grid-column"]{grid-column:1/-1!important}
+.roi-editor{height:320px;border-radius:4px;background:linear-gradient(165deg,#4e7182 0 38%,#153b50 39%,#061a2e 100%)}
+.roi-editor::before{content:'ROI AREA';position:absolute;inset:12% 8% 16%;border:2px solid var(--teal);clip-path:polygon(12% 20%,80% 5%,100% 83%,45% 100%,0 75%);background:rgba(66,232,227,.08)}
+.field,.toggle-row,.contact-row{background:rgba(3,16,32,.25);padding:11px 10px;border-bottom:1px solid #173754}.field{margin:0}.contact-row{border-radius:3px}
+
+@media(max-width:1050px){.control-grid{grid-template-columns:1fr}.timeline-card{grid-column:1}.video-panel{min-height:390px}.side-col{display:grid;grid-template-columns:1fr 1fr}.timeline-card .log-list{grid-template-columns:repeat(4,minmax(150px,1fr))}}
+@media(max-width:720px){.control-grid,.settings-grid{display:block}.side-col{display:block}.side-col .card,.settings-grid>.card,.settings-grid>div{margin-top:12px}.video-panel{min-height:330px}.timeline-card .log-list{grid-template-columns:repeat(3,170px)}}
