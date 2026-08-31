@@ -18,6 +18,13 @@ const session = dgRequireRole(['operator','admin'], 'index.html');
   const site = dgGetSites().find(s => s.id === siteId);
   document.getElementById('siteLabel').textContent = site ? `${site.name} · BOARD-01` : '사이트 미지정';
 
+  // 금오천 일대 사이트에서만 실시간 기온 표시
+  if(siteId === 'chunjeon'){
+    document.getElementById('tempChip').style.display = 'inline';
+    loadWeather();
+    setInterval(loadWeather, 10 * 60 * 1000);
+  }
+
   document.getElementById('logoutBtn').addEventListener('click', () => {
     clearInterval(simTimer);
     dgAudit(`로그아웃 · ${session.name}`);
@@ -31,23 +38,6 @@ function tickClock(){
   document.getElementById('clock').textContent = new Date().toLocaleString('ko-KR',{hour12:false});
 }
 tickClock(); setInterval(tickClock,1000);
-
-/* ---------------- WEATHER ---------------- */
-async function loadWeather(){
-  try {
-    const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude=36.12659&longitude=128.33886&current=temperature_2m');
-    if(!res.ok) throw new Error(`HTTP ${res.status}`);
-
-    const data = await res.json();
-    const temp = data.current.temperature_2m;
-    document.getElementById('tempChip').textContent = `☁ ${temp.toFixed(1)}°C`;
-  } catch (e) {
-    console.error('기온 API 호출 실패', e);
-    document.getElementById('tempChip').textContent = '☁ --°C';
-  }
-}
-loadWeather();
-setInterval(loadWeather, 10 * 60 * 1000);
 
 /* ---------------- NAV ---------------- */
 function switchView(v){
@@ -389,3 +379,16 @@ renderBoard();
 renderStepper();
 updateSideStats();
 pushLog('시스템 초기화 완료 · 상시 수면 감시 대기 중','info');
+
+/* ---------------- 실시간 기온 (Open-Meteo, 구미시 원평동 좌표) — '금오천 일대' 사이트 전용 ---------------- */
+async function loadWeather(){
+  try {
+    const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude=36.12659&longitude=128.33886&current=temperature_2m');
+    const data = await res.json();
+    const temp = data.current.temperature_2m;
+    document.getElementById('tempChip').textContent = `☁ ${temp.toFixed(1)}°C`;
+  } catch (e) {
+    console.error('기온 API 호출 실패', e);
+    document.getElementById('tempChip').textContent = '☁ --°C';
+  }
+}
