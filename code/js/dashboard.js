@@ -62,8 +62,6 @@ const state = {
   log:[],
   contacts:[
     {name:'김규량', phone:'010-5034-0284', notify:true},
-    {name:'박정우', phone:'010-9633-1959', notify:true},
-    {name:'이지훈', phone:'010-7719-4482', notify:false},
   ],
   diag:{'카메라':'ok','GPU 서버':'ok','배터리':'ok','모터':'ok','통신':'ok'},
 };
