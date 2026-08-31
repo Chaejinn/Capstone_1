@@ -18,7 +18,7 @@ const session = dgRequireRole(['operator','admin'], 'index.html');
   const site = dgGetSites().find(s => s.id === siteId);
   document.getElementById('siteLabel').textContent = site ? `${site.name} · BOARD-01` : '사이트 미지정';
 
-  // 금오천 일대 사이트에서만 실시간 기온 표시
+  // 일단은 금오천 일대 사이트에서만 실시간 기온 표시
   if(siteId === 'chunjeon'){
     document.getElementById('tempChip').style.display = 'inline';
     loadWeather();
