@@ -32,6 +32,23 @@ function tickClock(){
 }
 tickClock(); setInterval(tickClock,1000);
 
+/* ---------------- WEATHER ---------------- */
+async function loadWeather(){
+  try {
+    const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude=36.12659&longitude=128.33886&current=temperature_2m');
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+
+    const data = await res.json();
+    const temp = data.current.temperature_2m;
+    document.getElementById('tempChip').textContent = `☁ ${temp.toFixed(1)}°C`;
+  } catch (e) {
+    console.error('기온 API 호출 실패', e);
+    document.getElementById('tempChip').textContent = '☁ --°C';
+  }
+}
+loadWeather();
+setInterval(loadWeather, 10 * 60 * 1000);
+
 /* ---------------- NAV ---------------- */
 function switchView(v){
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active', b.dataset.view===v));
