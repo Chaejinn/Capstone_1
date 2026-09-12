@@ -25,7 +25,11 @@ const DG = {
 /* ---------- seed default data on first run ---------- */
 function dgSeed(){
   if(!localStorage.getItem(DG.KEYS.users)){
-    localStorage.setItem(DG.KEYS.users, JSON.stringify([]));
+    localStorage.setItem(DG.KEYS.users, JSON.stringify([
+      {id:'chacha', pw:'guardian2026', name:'차유비', role:'operator', active:true},
+      {id:'kyuryang', pw:'guardian2026', name:'김규량', role:'operator', active:true},
+      {id:'chaejin',  pw:'guardian2026', name:'김채진', role:'operator', active:true},
+    ]));
   }
   if(!localStorage.getItem(DG.KEYS.sites)){
     localStorage.setItem(DG.KEYS.sites, JSON.stringify(DG.SITES));

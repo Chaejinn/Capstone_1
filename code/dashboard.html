@@ -21,7 +21,7 @@
     <div class="page-identity"><span class="page-icon">⌁</span><div><b>관제 대시보드</b><small>평상시 감시 상태</small></div></div>
     <div class="top-mid">
       <span id="clock">--:--:--</span>
-      <span id="tempChip" class="weather-chip" style="display:none;">☁ --°C</span>
+      <span class="weather-chip">☁ 24.6°C</span>
       <span class="weather-chip">≋ 0.3 m</span>
       <span id="siteLabel" class="site-chip">사이트</span>
     </div>
@@ -87,33 +87,12 @@
             <button class="btn" id="pauseBtn" onclick="pauseSim()" disabled>일시정지</button>
             <button class="btn" onclick="resetSim()">↺ 리셋</button>
             <div class="spacer"></div>
-            <div class="switch-wrap">
-              자율<div class="switch" id="modeSwitch" onclick="toggleMode()"></div>수동
-            </div>
             <button class="estop-btn" onclick="triggerEstop()">STOP</button>
-          </div>
-
-          <div id="manualPanel" style="display:none; margin-top:14px; border-top:1px solid var(--line-soft); padding-top:12px;">
-            <h3 style="margin-bottom:8px;">가상 조이스틱 <span class="tag">FR-SAF-002</span></h3>
-            <div style="display:flex; gap:24px; align-items:center; flex-wrap:wrap;">
-              <div class="manual-pad">
-                <span></span><button class="pad-btn" onclick="manualMove(0,-1)">▲</button><span></span>
-                <button class="pad-btn" onclick="manualMove(-1,0)">◀</button><span></span><button class="pad-btn" onclick="manualMove(1,0)">▶</button>
-                <span></span><button class="pad-btn" onclick="manualMove(0,1)">▼</button><span></span>
-              </div>
-              <button class="btn" onclick="forceDeploy()">🎈 부력체 강제 전개 (FR-SAF-003)</button>
-              <span class="mono" style="font-size:11px; color:var(--text-2);">수동 명령이 자율 명령보다 항상 우선 처리됩니다.</span>
-            </div>
           </div>
         </div>
       </div>
 
       <div class="side-col">
-        <div class="card onboard-card">
-          <h3>온보드 카메라 <span class="tag">BOARD-01</span></h3>
-          <div class="mini-cam"><span class="lb">● LIVE</span><span class="horizon"></span><span class="onboard-copy">DG-001 전방 스트림</span></div>
-        </div>
-
         <div class="card board-status-card">
           <h3>구조보드 상태</h3>
           <div class="stat-row"><span class="k">동작 모드</span><span class="v" id="statMode">자율</span></div>

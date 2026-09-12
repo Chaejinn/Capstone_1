@@ -18,13 +18,6 @@ const session = dgRequireRole(['operator','admin'], 'index.html');
   const site = dgGetSites().find(s => s.id === siteId);
   document.getElementById('siteLabel').textContent = site ? `${site.name} · BOARD-01` : '사이트 미지정';
 
-  // 일단은 금오천 일대 사이트에서만 실시간 기온 표시
-  if(siteId === 'chunjeon'){
-    document.getElementById('tempChip').style.display = 'inline';
-    loadWeather();
-    setInterval(loadWeather, 10 * 60 * 1000);
-  }
-
   document.getElementById('logoutBtn').addEventListener('click', () => {
     clearInterval(simTimer);
     dgAudit(`로그아웃 · ${session.name}`);
@@ -51,7 +44,7 @@ function switchView(v){
 /* ---------------- STATE ---------------- */
 const globalSettings = dgGetSettings();
 const state = {
-  phase:'IDLE', running:false, mode:'AUTO', estop:false,
+  phase:'IDLE', running:false, estop:false,
   confidence:0, distance:null, battery:87,
   boardPos:{x:15,y:78}, targetPos:{x:62,y:38}, approachPos:{x:54,y:44},
   stepIndex:-1,
@@ -62,6 +55,8 @@ const state = {
   log:[],
   contacts:[
     {name:'김규량', phone:'010-5034-0284', notify:true},
+    {name:'박정우', phone:'010-9633-1959', notify:true},
+    {name:'이지훈', phone:'010-7719-4482', notify:false},
   ],
   diag:{'카메라':'ok','GPU 서버':'ok','배터리':'ok','모터':'ok','통신':'ok'},
 };
@@ -191,21 +186,11 @@ function runDiagnostics(){
 }
 renderDiag();
 
-/* ---------------- MODE / ESTOP ---------------- */
-function toggleMode(){
-  if(state.estop) return;
-  state.mode = state.mode==='AUTO' ? 'MANUAL' : 'AUTO';
-  document.getElementById('modeSwitch').classList.toggle('on', state.mode==='MANUAL');
-  document.getElementById('manualPanel').style.display = state.mode==='MANUAL' ? 'block':'none';
-  document.getElementById('statMode').textContent = state.mode==='MANUAL' ? '수동':'자율';
-  updateModeBadge();
-  pushLog(state.mode==='MANUAL' ? '수동 조작 모드로 전환됨 (관리자 명령 우선)' : '자율 모드로 복귀됨', state.mode==='MANUAL'?'warn':'info');
-}
+/* ---------------- ESTOP (자율 전용 — 수동 조작 기능은 삭제됨) ---------------- */
 function updateModeBadge(){
   const b = document.getElementById('modeBadge');
-  b.classList.remove('manual','estop');
+  b.classList.remove('estop');
   if(state.estop){ b.textContent='⛔ 비상정지'; b.classList.add('estop'); }
-  else if(state.mode==='MANUAL'){ b.textContent='수동 모드'; b.classList.add('manual'); }
   else { b.textContent='자율 모드'; }
 }
 function triggerEstop(){
@@ -226,22 +211,6 @@ function clearEstop(){
   pushLog('비상정지 해제됨 · 시스템 대기 상태로 복귀','info');
 }
 
-/* ---------------- MANUAL CONTROL ---------------- */
-function manualMove(dx,dy){
-  if(state.estop || state.mode!=='MANUAL') return;
-  state.boardPos.x = Math.max(2,Math.min(95, state.boardPos.x+dx*3));
-  state.boardPos.y = Math.max(2,Math.min(95, state.boardPos.y+dy*3));
-  renderBoard();
-  updateDistanceFromPositions();
-}
-function forceDeploy(){
-  if(state.estop) return;
-  state.phase='DEPLOYING'; state.stepIndex=4;
-  renderStepper(); renderBoard();
-  pushLog('관리자 강제 부력체 전개 명령 실행됨 (FR-SAF-003)','warn');
-  setTimeout(()=>{ state.phase='COMPLETE'; pushLog('부력체 전개 완료 · 구조대 인계 대기','crit'); },900);
-}
-
 /* ---------------- SIM CORE ---------------- */
 function startSim(){
   if(state.estop) return;
@@ -260,11 +229,9 @@ function pauseSim(){
 function resetSim(){
   clearInterval(simTimer); state.running=false; state.estop=false;
   state.phase='IDLE'; state.confidence=0; state.distance=null; screeningTicks=0; state.stepIndex=-1;
-  state.battery=87; state.mode='AUTO';
+  state.battery=87;
   state.boardPos={x:15,y:78};
   document.getElementById('estopOverlay').style.display='none';
-  document.getElementById('modeSwitch').classList.remove('on');
-  document.getElementById('manualPanel').style.display='none';
   document.getElementById('startBtn').disabled=false;
   document.getElementById('pauseBtn').disabled=true;
   document.getElementById('alertBanner').style.display='none';
@@ -300,16 +267,14 @@ function tick(){
     }
   }
   else if(state.phase==='APPROACHING'){
-    if(state.mode==='AUTO'){
-      state.distance = Math.max(0, state.distance - (1.1+Math.random()*0.4));
-      const frac = 1 - Math.min(1, state.distance/40);
-      state.boardPos.x = 15 + (state.approachPos.x-15)*frac;
-      state.boardPos.y = 78 + (state.approachPos.y-78)*frac;
-      renderBoard();
-      if(state.distance<=2){
-        state.phase='DEPLOYING'; state.stepIndex=2;
-        pushLog('초음파 임계 거리 도달 · 추진 정지 · 하부 진입 정렬 시작','info');
-      }
+    state.distance = Math.max(0, state.distance - (1.1+Math.random()*0.4));
+    const frac = 1 - Math.min(1, state.distance/40);
+    state.boardPos.x = 15 + (state.approachPos.x-15)*frac;
+    state.boardPos.y = 78 + (state.approachPos.y-78)*frac;
+    renderBoard();
+    if(state.distance<=2){
+      state.phase='DEPLOYING'; state.stepIndex=2;
+      pushLog('초음파 임계 거리 도달 · 추진 정지 · 하부 진입 정렬 시작','info');
     }
   }
   else if(state.phase==='DEPLOYING'){
@@ -347,12 +312,6 @@ function renderBoard(){
   const el = document.getElementById('boardIcon');
   el.style.left = state.boardPos.x+'%'; el.style.top = state.boardPos.y+'%';
 }
-function updateDistanceFromPositions(){
-  if(state.distance===null) return;
-  const dx = state.boardPos.x-state.approachPos.x, dy = state.boardPos.y-state.approachPos.y;
-  state.distance = Math.max(0, Math.sqrt(dx*dx+dy*dy)*0.9);
-  updateSideStats();
-}
 function renderStepper(){
   document.querySelectorAll('#stepper .seg').forEach(seg=>{
     const idx = parseInt(seg.dataset.s);
@@ -362,9 +321,8 @@ function renderStepper(){
   });
 }
 function updateSideStats(){
-  document.getElementById('statMode').textContent = state.mode==='MANUAL' ? '수동' : '자율';
   document.getElementById('statDist').textContent = state.distance===null ? '— m' : state.distance.toFixed(1)+' m';
-  document.getElementById('statSpeed').textContent = (state.phase==='APPROACHING' && state.mode==='AUTO') ? '1.1 m/s' : '0.0 m/s';
+  document.getElementById('statSpeed').textContent = (state.phase==='APPROACHING') ? '1.1 m/s' : '0.0 m/s';
   document.getElementById('statBatt').textContent = state.battery+'%';
   document.getElementById('battBar').style.width = state.battery+'%';
   document.getElementById('battBar').style.background = state.battery<25 ? 'var(--red)' : state.battery<50 ? 'var(--amber)' : 'var(--teal)';
@@ -377,16 +335,3 @@ renderBoard();
 renderStepper();
 updateSideStats();
 pushLog('시스템 초기화 완료 · 상시 수면 감시 대기 중','info');
-
-/* ---------------- 실시간 기온 (Open-Meteo, 구미시 원평동 좌표) — '금오천 일대' 사이트 전용 ---------------- */
-async function loadWeather(){
-  try {
-    const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude=36.12659&longitude=128.33886&current=temperature_2m');
-    const data = await res.json();
-    const temp = data.current.temperature_2m;
-    document.getElementById('tempChip').textContent = `☁ ${temp.toFixed(1)}°C`;
-  } catch (e) {
-    console.error('기온 API 호출 실패', e);
-    document.getElementById('tempChip').textContent = '☁ --°C';
-  }
-}
