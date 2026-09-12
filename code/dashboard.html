@@ -21,7 +21,7 @@
     <div class="page-identity"><span class="page-icon">⌁</span><div><b>관제 대시보드</b><small>평상시 감시 상태</small></div></div>
     <div class="top-mid">
       <span id="clock">--:--:--</span>
-      <span class="weather-chip">☁ 24.6°C</span>
+      <span id="tempChip" class="weather-chip" style="display:none;">☁ --°C</span>
       <span class="weather-chip">≋ 0.3 m</span>
       <span id="siteLabel" class="site-chip">사이트</span>
     </div>
@@ -130,7 +130,7 @@
   <!-- ============ SETTINGS VIEW ============ -->
   <div class="view" id="view-settings" hidden>
     <div class="section-title">설정</div>
-    <div class="section-sub">감시 ROI, 판정 임계값, 야간 모드, 알림 대상, 개인정보 옵션을 구성합니다.</div>
+    <div class="section-sub">감시 ROI, 판정 임계값, 야간 모드, 개인정보 옵션을 구성합니다.</div>
 
     <div class="settings-grid">
       <div class="card">
@@ -175,11 +175,6 @@
         </div>
       </div>
 
-      <div class="card" style="grid-column:1/3;">
-        <h3>알림 대상 <span class="tag" id="contactCount">3명</span></h3>
-        <div id="contactList"></div>
-        <div class="sim-controls"><button class="btn" onclick="addContact()">+ 관리자 추가</button></div>
-      </div>
     </div>
   </div>
 

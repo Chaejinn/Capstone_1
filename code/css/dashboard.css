@@ -65,10 +65,6 @@
 .field label{display:flex; justify-content:space-between; font-size:12px; color:var(--text-2); margin-bottom:6px; font-family:'JetBrains Mono',monospace;}
 .field label b{color:var(--text-1); font-weight:600;}
 .toggle-row{display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid var(--line-soft); font-size:12.5px;}
-.contact-row{display:flex; align-items:center; gap:8px; padding:7px 0; border-bottom:1px solid var(--line-soft); font-size:12px;}
-.contact-row input[type=text]{background:var(--panel-2); border:1px solid var(--line); border-radius:6px; color:var(--text-1); padding:5px 8px; font-size:12px; font-family:'JetBrains Mono',monospace;}
-.contact-row input[type=text].name{width:80px;}
-.contact-row input[type=text].phone{width:110px;}
 .del-btn{margin-left:auto; background:none; border:none; color:var(--text-2); font-size:16px;}
 .del-btn:hover{color:var(--red);}
 
@@ -115,7 +111,7 @@
 .settings-grid>.card:first-child{grid-row:span 2}.settings-grid>.card[style*="grid-column"]{grid-column:1/-1!important}
 .roi-editor{height:320px;border-radius:4px;background:linear-gradient(165deg,#4e7182 0 38%,#153b50 39%,#061a2e 100%)}
 .roi-editor::before{content:'ROI AREA';position:absolute;inset:12% 8% 16%;border:2px solid var(--teal);clip-path:polygon(12% 20%,80% 5%,100% 83%,45% 100%,0 75%);background:rgba(66,232,227,.08)}
-.field,.toggle-row,.contact-row{background:rgba(3,16,32,.25);padding:11px 10px;border-bottom:1px solid #173754}.field{margin:0}.contact-row{border-radius:3px}
+.field,.toggle-row{background:rgba(3,16,32,.25);padding:11px 10px;border-bottom:1px solid #173754}.field{margin:0}
 
 @media(max-width:1050px){.control-grid{grid-template-columns:1fr}.timeline-card{grid-column:1}.video-panel{min-height:390px}.side-col{display:grid;grid-template-columns:1fr 1fr}.timeline-card .log-list{grid-template-columns:repeat(4,minmax(150px,1fr))}}
 @media(max-width:720px){.control-grid,.settings-grid{display:block}.side-col{display:block}.side-col .card,.settings-grid>.card,.settings-grid>div{margin-top:12px}.video-panel{min-height:330px}.timeline-card .log-list{grid-template-columns:repeat(3,170px)}}

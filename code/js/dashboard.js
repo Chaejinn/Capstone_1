@@ -18,6 +18,13 @@ const session = dgRequireRole(['operator','admin'], 'index.html');
   const site = dgGetSites().find(s => s.id === siteId);
   document.getElementById('siteLabel').textContent = site ? `${site.name} · BOARD-01` : '사이트 미지정';
 
+  // 금오천 일대 사이트에서 실시간 기온 표시
+  if(siteId === 'chunjeon'){
+    document.getElementById('tempChip').style.display = 'inline';
+    loadWeather();
+    setInterval(loadWeather, 10 * 60 * 1000);
+  }
+
   document.getElementById('logoutBtn').addEventListener('click', () => {
     clearInterval(simTimer);
     dgAudit(`로그아웃 · ${session.name}`);
@@ -36,7 +43,7 @@ tickClock(); setInterval(tickClock,1000);
 function switchView(v){
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active', b.dataset.view===v));
   document.querySelectorAll('.view').forEach(el=>el.hidden = el.id!=='view-'+v);
-  if(v==='settings'){ renderRoi(); renderContacts(); }
+  if(v==='settings'){ renderRoi(); }
   if(v==='system'){ renderDiag(); }
   if(v==='events'){ renderLog(); }
 }
@@ -53,11 +60,6 @@ const state = {
   nightPreview:false,
   roi:[{x:12,y:20},{x:70,y:10},{x:88,y:55},{x:55,y:88},{x:8,y:60}],
   log:[],
-  contacts:[
-    {name:'김규량', phone:'010-5034-0284', notify:true},
-    {name:'박정우', phone:'010-9633-1959', notify:true},
-    {name:'이지훈', phone:'010-7719-4482', notify:false},
-  ],
   diag:{'카메라':'ok','GPU 서버':'ok','배터리':'ok','모터':'ok','통신':'ok'},
 };
 document.getElementById('threshConf').value = state.threshConf;
@@ -141,25 +143,6 @@ function applyNight(){
   document.getElementById('videoPanel').classList.toggle('night', state.nightPreview);
   document.getElementById('irBadge').style.display = state.nightPreview? 'block':'none';
 }
-
-/* ---------------- CONTACTS ---------------- */
-function renderContacts(){
-  const wrap = document.getElementById('contactList');
-  wrap.innerHTML = state.contacts.map((c,i)=>`
-    <div class="contact-row">
-      <input type="checkbox" ${c.notify?'checked':''} onchange="state.contacts[${i}].notify=this.checked">
-      <input class="mono name" type="text" value="${c.name}" onchange="state.contacts[${i}].name=this.value">
-      <input class="mono phone" type="text" value="${c.phone}" onchange="state.contacts[${i}].phone=this.value">
-      <span class="mono" style="font-size:10px; color:var(--text-2);">${c.notify?'알림 ON':'알림 OFF'}</span>
-      <button class="del-btn" onclick="removeContact(${i})">✕</button>
-    </div>`).join('');
-  document.getElementById('contactCount').textContent = state.contacts.length+'명';
-}
-function addContact(){
-  state.contacts.push({name:'신규 관리자', phone:'010-0000-0000', notify:true});
-  renderContacts();
-}
-function removeContact(i){ state.contacts.splice(i,1); renderContacts(); }
 
 /* ---------------- DIAGNOSTICS ---------------- */
 function renderDiag(){
@@ -261,7 +244,6 @@ function tick(){
       showTargetBox('alert');
       document.getElementById('alertBanner').style.display='flex';
       pushLog(`⚠ 익수 판정 — ID 02 · 신뢰도 ${(state.confidence*100).toFixed(0)}% · 출동 명령 발행 (3초 이내)`,'crit');
-      state.contacts.filter(c=>c.notify).forEach(c=> pushLog(`관리자 알림 발송 → ${c.name} (${c.phone})`,'info'));
       dgAudit(`익수 판정 이벤트 발생 · 신뢰도 ${(state.confidence*100).toFixed(0)}%`);
       state.phase='APPROACHING'; state.stepIndex=1;
     }
@@ -330,8 +312,21 @@ function updateSideStats(){
 
 /* ---------------- INIT ---------------- */
 renderRoi();
-renderContacts();
 renderBoard();
 renderStepper();
 updateSideStats();
 pushLog('시스템 초기화 완료 · 상시 수면 감시 대기 중','info');
+
+/* ---------------- 실시간 기온 (Open-Meteo, 구미시 원평동 좌표) ---------------- */
+async function loadWeather(){
+  try {
+    const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude=36.12659&longitude=128.33886&current=temperature_2m');
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    const temp = data.current.temperature_2m;
+    document.getElementById('tempChip').textContent = `☁ ${temp.toFixed(1)}°C`;
+  } catch (error) {
+    console.error('기온 API 호출 실패', error);
+    document.getElementById('tempChip').textContent = '☁ --°C';
+  }
+}
