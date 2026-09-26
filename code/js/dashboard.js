@@ -52,7 +52,7 @@ function switchView(v){
 const globalSettings = dgGetSettings();
 const state = {
   phase:'IDLE', running:false, estop:false,
-  confidence:0, distance:null, battery:87,
+  confidence:0, distance:null, battery:87, commLevel:4,
   boardPos:{x:15,y:78}, targetPos:{x:62,y:38}, approachPos:{x:54,y:44},
   stepIndex:-1,
   threshConf: globalSettings.threshConf ?? 0.90,
@@ -183,6 +183,7 @@ function triggerEstop(){
   document.getElementById('startBtn').disabled=true;
   document.getElementById('pauseBtn').disabled=true;
   updateModeBadge();
+  updateCommStatus();
   pushLog('🛑 비상정지 발동 — 모든 추진 즉시 정지 (FR-SAF-004)','crit');
   dgAudit('비상정지 발동 · dashboard');
 }
@@ -191,6 +192,7 @@ function clearEstop(){
   document.getElementById('estopOverlay').style.display='none';
   document.getElementById('startBtn').disabled=false;
   updateModeBadge();
+  updateCommStatus();
   pushLog('비상정지 해제됨 · 시스템 대기 상태로 복귀','info');
 }
 
@@ -227,6 +229,7 @@ function resetSim(){
 
 function tick(){
   if(state.estop) return;
+  state.commLevel = state.phase==='APPROACHING' ? (Math.random()<0.15 ? 3 : 4) : 4;
 
   if(state.phase==='IDLE'){
     state.phase='SCREENING'; screeningTicks=0; state.confidence=0.35;
@@ -308,6 +311,22 @@ function updateSideStats(){
   document.getElementById('statBatt').textContent = state.battery+'%';
   document.getElementById('battBar').style.width = state.battery+'%';
   document.getElementById('battBar').style.background = state.battery<25 ? 'var(--red)' : state.battery<50 ? 'var(--amber)' : 'var(--teal)';
+  updateCommStatus();
+}
+function updateCommStatus(){
+  const badge = document.getElementById('commBadge');
+  const bars = document.getElementById('signalBars');
+  if(!badge || !bars) return;
+
+  let level = state.commLevel;
+  let cls = 'ok', label = '정상';
+  if(state.estop){ level = 0; cls = 'down'; label = '끊김'; }
+  else if(level<=2){ cls = 'warn'; label = '지연'; }
+
+  badge.textContent = label;
+  badge.className = 'comm-badge ' + cls;
+  bars.className = 'signal-bars ' + cls;
+  [...bars.children].forEach((bar,i)=> bar.classList.toggle('active', i < level));
 }
 
 /* ---------------- INIT ---------------- */
