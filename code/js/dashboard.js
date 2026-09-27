@@ -40,7 +40,14 @@ function tickClock(){
 tickClock(); setInterval(tickClock,1000);
 
 /* ---------------- NAV ---------------- */
+// 출동(경보~전개) 중에는 설정 화면 진입을 차단한다.
+// screenflow.puml: "S1 --> S3 : 메뉴 (출동 중 진입 차단)" / SD-07 alt "[출동 진행 중] 진입 차단 (NF-U-07)"
+const DISPATCH_PHASES = ['ALERT','APPROACHING','DEPLOYING'];
 function switchView(v){
+  if(v==='settings' && state && DISPATCH_PHASES.includes(state.phase)){
+    showToast('⛔ 출동 진행 중에는 설정 화면에 접근할 수 없습니다.');
+    return;
+  }
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active', b.dataset.view===v));
   document.querySelectorAll('.view').forEach(el=>el.hidden = el.id!=='view-'+v);
   if(v==='settings'){ renderRoi(); }
@@ -48,10 +55,20 @@ function switchView(v){
   if(v==='events'){ renderLog(); }
 }
 
+/* ---------------- TOAST ---------------- */
+let toastTimer=null;
+function showToast(msg){
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.display = 'block';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>{ el.style.display='none'; }, 2600);
+}
+
 /* ---------------- STATE ---------------- */
 const globalSettings = dgGetSettings();
 const state = {
-  phase:'IDLE', running:false, estop:false,
+  phase:'IDLE', running:false, estop:false, cancellable:false, currentEventMeta:null,
   confidence:0, distance:null, battery:87, commLevel:4,
   boardPos:{x:15,y:78}, targetPos:{x:62,y:38}, approachPos:{x:54,y:44},
   stepIndex:-1,
@@ -67,20 +84,43 @@ document.getElementById('threshFr').value = state.threshFrames;
 document.getElementById('threshConfLbl').textContent = state.threshConf.toFixed(2);
 document.getElementById('threshFrLbl').textContent = state.threshFrames+' 프레임';
 
-let simTimer=null, screeningTicks=0;
+let simTimer=null, screeningTicks=0, cancelTimer=null;
 
 /* ---------------- LOGGING ---------------- */
-function pushLog(text, level){
+// meta가 있으면(판정 이벤트) 타임라인에서 클릭 시 근거 스냅샷 상세를 볼 수 있다. (FR-MON-004, screenflow S4 자기루프)
+function pushLog(text, level, meta){
   const t = new Date().toLocaleTimeString('ko-KR',{hour12:false});
-  state.log.push({t, text, level: level||'info'});
+  state.log.push({t, text, level: level||'info', meta: meta||null});
   renderLog();
 }
 function renderLog(){
-  const mkItem = (e)=>`<div class="log-item ${e.level==='crit'?'crit':e.level==='warn'?'warn':''}"><span class="t">${e.t}</span>${e.text}</div>`;
-  const items = state.log.slice(-40).map(mkItem).join('');
+  const mkItem = (e,idx)=>{
+    const clickable = e.meta ? ' clickable' : '';
+    const onclick = e.meta ? ` onclick="openEventDetail(${idx})"` : '';
+    return `<div class="log-item ${e.level==='crit'?'crit':e.level==='warn'?'warn':''}${clickable}"${onclick}><span class="t">${e.t}</span>${e.text}${e.meta?' <span class="mono" style="color:var(--teal);">· 상세 보기 →</span>':''}</div>`;
+  };
+  const items = state.log.map(mkItem).slice(-40).join('');
   document.getElementById('logList').innerHTML = items;
-  document.getElementById('logListFull').innerHTML = state.log.slice().reverse().map(mkItem).join('');
+  document.getElementById('logListFull').innerHTML = state.log.map(mkItem).slice().reverse().join('');
   document.getElementById('logCount').textContent = state.log.length+'건';
+}
+
+/* ---------------- EVENT DETAIL / EVIDENCE SNAPSHOT MODAL ---------------- */
+function openEventDetail(idx){
+  const e = state.log[idx];
+  if(!e || !e.meta) return;
+  const m = e.meta;
+  document.getElementById('modalDetail').innerHTML = `
+    <div><b>이벤트 ID</b> · ${m.id}</div>
+    <div><b>발생 시각</b> · ${e.t}</div>
+    <div><b>판정 결과</b> · ${m.verdict}</div>
+    <div><b>신뢰도</b> · ${(m.confidence*100).toFixed(0)}%</div>
+    <div><b>상태</b> · ${m.status}</div>`;
+  document.getElementById('eventModal').style.display='flex';
+}
+function closeEventModal(ev){
+  if(ev && ev.target !== ev.currentTarget) return;
+  document.getElementById('eventModal').style.display='none';
 }
 
 /* ---------------- ROI RENDER ---------------- */
@@ -177,18 +217,29 @@ function updateModeBadge(){
   else { b.textContent='자율 모드'; }
 }
 function triggerEstop(){
-  state.estop=true; state.running=false;
+  state.estop=true; state.running=false; state.cancellable=false;
+  closeEventModal();
+  switchView('control');
   clearInterval(simTimer);
+  clearInterval(cancelTimer);
+  document.getElementById('cancelDispatchBtn').style.display='none';
   document.getElementById('estopOverlay').style.display='flex';
   document.getElementById('startBtn').disabled=true;
   document.getElementById('pauseBtn').disabled=true;
   updateModeBadge();
-  updateCommStatus();
+  updateSideStats();
   pushLog('🛑 비상정지 발동 — 모든 추진 즉시 정지 (FR-SAF-004)','crit');
   dgAudit('비상정지 발동 · dashboard');
 }
 function clearEstop(){
+  if(state.currentEventMeta) state.currentEventMeta.status='STOPPED';
+  state.phase='IDLE'; state.confidence=0; state.distance=null;
+  state.stepIndex=-1; screeningTicks=0;
+  state.boardPos={x:15,y:78};
+  document.getElementById('alertBanner').style.display='none';
+  document.getElementById('targetBox').style.display='none';
   state.estop=false;
+  renderBoard(); renderStepper(); updateSideStats();
   document.getElementById('estopOverlay').style.display='none';
   document.getElementById('startBtn').disabled=false;
   updateModeBadge();
@@ -196,9 +247,67 @@ function clearEstop(){
   pushLog('비상정지 해제됨 · 시스템 대기 상태로 복귀','info');
 }
 
+/* ---------------- ALARM SOUND ---------------- */
+// SD-02: WS -> OP : 화면 2 자동 전환 + 경보음
+function playAlarmBeep(){
+  try{
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    [0,0.22,0.44].forEach(delay=>{
+      const osc = ctx.createOscillator(), gain = ctx.createGain();
+      osc.type='square'; osc.frequency.value=880;
+      gain.gain.setValueAtTime(0.0001, ctx.currentTime+delay);
+      gain.gain.exponentialRampToValueAtTime(0.18, ctx.currentTime+delay+0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime+delay+0.18);
+      osc.connect(gain); gain.connect(ctx.destination);
+      if(delay===0.44) osc.onended = ()=>{ ctx.close().catch(()=>{}); };
+      osc.start(ctx.currentTime+delay); osc.stop(ctx.currentTime+delay+0.2);
+    });
+  }catch(e){ /* AudioContext 미지원 환경 — 무음으로 대체 */ }
+}
+
+/* ---------------- 출동 취소 (EX-12, SD-02 opt 블록) ---------------- */
+function startCancelWindow(){
+  let remain = 3;
+  const btn = document.getElementById('cancelDispatchBtn');
+  const label = document.getElementById('cancelCountdown');
+  btn.style.display='inline-block'; btn.disabled=false;
+  label.textContent = remain;
+  state.cancellable = true;
+  clearInterval(cancelTimer);
+  cancelTimer = setInterval(()=>{
+    remain--;
+    if(remain<=0){
+      clearInterval(cancelTimer);
+      state.cancellable = false;
+      btn.disabled = true;
+      label.textContent = 0;
+    } else {
+      label.textContent = remain;
+    }
+  }, 1000);
+}
+function cancelDispatch(){
+  if(!state.cancellable || state.estop) return;
+  clearInterval(cancelTimer);
+  state.cancellable = false;
+  document.getElementById('cancelDispatchBtn').style.display='none';
+  state.confidence=0;
+  state.phase='IDLE'; state.running=false; screeningTicks=0; state.stepIndex=-1; state.distance=null;
+  state.boardPos={x:15,y:78};
+  clearInterval(simTimer);
+  document.getElementById('alertBanner').style.display='none';
+  document.getElementById('targetBox').style.display='none';
+  document.getElementById('startBtn').disabled=false;
+  document.getElementById('pauseBtn').disabled=true;
+  if(state.currentEventMeta) state.currentEventMeta.status='CANCELLED';
+  renderBoard(); renderStepper(); updateSideStats();
+  pushLog(`출동 취소됨 · 관리자 수동 취소 · 오탐(false positive) 라벨 처리 (EX-12)`,'warn');
+  dgAudit('출동 취소 · 오탐 처리 · dashboard');
+}
+
 /* ---------------- SIM CORE ---------------- */
 function startSim(){
-  if(state.estop) return;
+  if(state.estop || state.running) return;
   state.running=true;
   document.getElementById('startBtn').disabled=true;
   document.getElementById('pauseBtn').disabled=false;
@@ -212,9 +321,11 @@ function pauseSim(){
   pushLog('시뮬레이션 일시정지됨','info');
 }
 function resetSim(){
-  clearInterval(simTimer); state.running=false; state.estop=false;
+  closeEventModal();
+  document.getElementById('cancelDispatchBtn').style.display='none';
+  clearInterval(simTimer); clearInterval(cancelTimer); state.running=false; state.estop=false;
   state.phase='IDLE'; state.confidence=0; state.distance=null; screeningTicks=0; state.stepIndex=-1;
-  state.battery=87;
+  state.battery=87; state.cancellable=false; state.currentEventMeta=null;
   state.boardPos={x:15,y:78};
   document.getElementById('estopOverlay').style.display='none';
   document.getElementById('startBtn').disabled=false;
@@ -246,7 +357,15 @@ function tick(){
       state.distance=40;
       showTargetBox('alert');
       document.getElementById('alertBanner').style.display='flex';
-      pushLog(`⚠ 익수 판정 — ID 02 · 신뢰도 ${(state.confidence*100).toFixed(0)}% · 출동 명령 발행 (3초 이내)`,'crit');
+
+      // SD-02: 화면 2(관제) 자동 전환 + 경보음 — 관리자가 설정/이벤트/상태 화면에 있어도 강제 전환
+      switchView('control');
+      playAlarmBeep();
+      startCancelWindow();
+
+      const eventId = 'EVT-' + Date.now().toString(36).toUpperCase();
+      state.currentEventMeta = {id: eventId, verdict:'DROWNING', confidence: state.confidence, status:'DISPATCHED'};
+      pushLog(`⚠ 익수 판정 — ID 02 · 신뢰도 ${(state.confidence*100).toFixed(0)}% · 출동 명령 발행 (3초 이내 취소 가능)`,'crit', state.currentEventMeta);
       dgAudit(`익수 판정 이벤트 발생 · 신뢰도 ${(state.confidence*100).toFixed(0)}%`);
       state.phase='APPROACHING'; state.stepIndex=1;
     }
@@ -267,6 +386,7 @@ function tick(){
     if(state.stepIndex===3) pushLog('요구조자 하부 진입 자세 정렬 완료','info');
     if(state.stepIndex>=4){
       state.phase='COMPLETE';
+      if(state.currentEventMeta) state.currentEventMeta.status='COMPLETE';
       pushLog('🎈 부력체 전개 완료 · 상체·기도 확보 · 구조대 인계 대기','crit');
       dgAudit('부력체 전개 완료 · 구조 시뮬레이션 종료');
       pauseSim();
@@ -307,7 +427,7 @@ function renderStepper(){
 }
 function updateSideStats(){
   document.getElementById('statDist').textContent = state.distance===null ? '— m' : state.distance.toFixed(1)+' m';
-  document.getElementById('statSpeed').textContent = (state.phase==='APPROACHING') ? '1.1 m/s' : '0.0 m/s';
+  document.getElementById('statSpeed').textContent = (state.phase==='APPROACHING' && state.running && !state.estop) ? '1.1 m/s' : '0.0 m/s';
   document.getElementById('statBatt').textContent = state.battery+'%';
   document.getElementById('battBar').style.width = state.battery+'%';
   document.getElementById('battBar').style.background = state.battery<25 ? 'var(--red)' : state.battery<50 ? 'var(--amber)' : 'var(--teal)';
