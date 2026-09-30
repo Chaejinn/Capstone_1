@@ -11,7 +11,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from . import config, models, security
 from .database import Base, SessionLocal, engine
-from .routers import audit, auth, contacts, events, settings, sites, users, ws
+from .camera import camera as camera_device
+from .routers import camera, audit, auth, contacts, events, settings, sites, users, ws
 
 SEED_SITES = [
     {"id": "chunjeon", "name": "금오천 일대", "meta": "CAM-01 · BOARD-01 · 실내 수조 실증", "status": "운영중", "enabled": True},
@@ -57,7 +58,10 @@ def seed_db():
 async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
     seed_db()
-    yield
+    try:
+        yield
+    finally:
+        camera_device.close()
 
 
 app = FastAPI(title="Drown Guardian API", version="1.0.0", lifespan=lifespan)
@@ -71,6 +75,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(camera.router)
 app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(sites.router)

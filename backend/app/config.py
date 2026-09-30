@@ -23,3 +23,12 @@ DEFAULT_THRESH_FRAMES = 15
 
 # NFR-PER-001: 탐지-출동 응답 지연 목표 (경고 로그용, 강제 차단은 아님)
 DISPATCH_LATENCY_TARGET_SEC = 3.0
+
+# USB camera index or a server-configured MJPEG/RTSP URL. Never supplied by clients.
+CAMERA_SOURCE = os.environ.get("DG_CAMERA_SOURCE", "0")
+CAMERA_SITE_ID = os.environ.get("DG_CAMERA_SITE_ID", "chunjeon")
+CAMERA_WIDTH = max(1, int(os.environ.get("DG_CAMERA_WIDTH", "1280")))
+CAMERA_HEIGHT = max(1, int(os.environ.get("DG_CAMERA_HEIGHT", "720")))
+CAMERA_FPS = max(1, min(60, int(os.environ.get("DG_CAMERA_FPS", "15"))))
+CAMERA_JPEG_QUALITY = max(1, min(100, int(os.environ.get("DG_CAMERA_JPEG_QUALITY", "80"))))
+CAMERA_TIMEOUT = max(1, float(os.environ.get("DG_CAMERA_TIMEOUT", "5")))
