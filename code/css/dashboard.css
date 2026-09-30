@@ -177,3 +177,13 @@
 
 @media(max-width:1050px){.control-grid{grid-template-columns:1fr}.timeline-card{grid-column:1}.video-panel{min-height:390px}.side-col{display:grid;grid-template-columns:1fr 1fr}.timeline-card .log-list{grid-template-columns:repeat(4,minmax(150px,1fr))}}
 @media(max-width:720px){.control-grid,.settings-grid{display:block}.side-col{display:block}.side-col .card,.settings-grid>.card,.settings-grid>div{margin-top:12px}.video-panel{min-height:330px}.timeline-card .log-list{grid-template-columns:repeat(3,170px)}}
+
+/* Live video replaces the decorative simulation scene. */
+.camera-feed{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000;z-index:1;}
+.video-panel.camera-connected .scene-buildings,.video-panel.camera-connected .scene-pier,
+.video-panel.camera-connected #boardIcon,.video-panel.camera-connected #targetBox,
+.video-panel.camera-connected #roiSvgControl{visibility:hidden;}
+.camera-settings{margin-top:12px;font-size:12px;}
+.camera-settings label{display:flex;flex-direction:column;gap:5px;}
+.camera-settings input{width:190px;max-width:100%;}
+#cameraStatus{margin-top:8px;color:var(--text-2);}
