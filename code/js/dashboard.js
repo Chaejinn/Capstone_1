@@ -68,7 +68,7 @@ function showToast(msg){
 /* ---------------- STATE ---------------- */
 const globalSettings = dgGetSettings();
 const state = {
-  phase:'IDLE', running:false, estop:false, cancellable:false, currentEventMeta:null,
+  phase:'IDLE', running:false, paused:false, estop:false, cancellable:false, currentEventMeta:null,
   confidence:0, distance:null, battery:87, commLevel:4,
   boardPos:{x:15,y:78}, targetPos:{x:62,y:38}, approachPos:{x:54,y:44},
   stepIndex:-1,
@@ -217,15 +217,14 @@ function updateModeBadge(){
   else { b.textContent='자율 모드'; }
 }
 function triggerEstop(){
-  state.estop=true; state.running=false; state.cancellable=false;
+  state.estop=true; state.running=false; state.paused=false; state.cancellable=false;
   closeEventModal();
   switchView('control');
   clearInterval(simTimer);
   clearInterval(cancelTimer);
   document.getElementById('cancelDispatchBtn').style.display='none';
   document.getElementById('estopOverlay').style.display='flex';
-  document.getElementById('startBtn').disabled=true;
-  document.getElementById('pauseBtn').disabled=true;
+  updateSimControls();
   updateModeBadge();
   updateSideStats();
   pushLog('🛑 비상정지 발동 — 모든 추진 즉시 정지 (FR-SAF-004)','crit');
@@ -241,7 +240,7 @@ function clearEstop(){
   state.estop=false;
   renderBoard(); renderStepper(); updateSideStats();
   document.getElementById('estopOverlay').style.display='none';
-  document.getElementById('startBtn').disabled=false;
+  updateSimControls();
   updateModeBadge();
   updateCommStatus();
   pushLog('비상정지 해제됨 · 시스템 대기 상태로 복귀','info');
@@ -292,13 +291,12 @@ function cancelDispatch(){
   state.cancellable = false;
   document.getElementById('cancelDispatchBtn').style.display='none';
   state.confidence=0;
-  state.phase='IDLE'; state.running=false; screeningTicks=0; state.stepIndex=-1; state.distance=null;
+  state.phase='IDLE'; state.running=false; state.paused=false; screeningTicks=0; state.stepIndex=-1; state.distance=null;
   state.boardPos={x:15,y:78};
   clearInterval(simTimer);
   document.getElementById('alertBanner').style.display='none';
   document.getElementById('targetBox').style.display='none';
-  document.getElementById('startBtn').disabled=false;
-  document.getElementById('pauseBtn').disabled=true;
+  updateSimControls();
   if(state.currentEventMeta) state.currentEventMeta.status='CANCELLED';
   renderBoard(); renderStepper(); updateSideStats();
   pushLog(`출동 취소됨 · 관리자 수동 취소 · 오탐(false positive) 라벨 처리 (EX-12)`,'warn');
@@ -306,30 +304,37 @@ function cancelDispatch(){
 }
 
 /* ---------------- SIM CORE ---------------- */
+function updateSimControls(){
+  const startBtn = document.getElementById('startBtn');
+  startBtn.textContent = state.paused ? '▶ 재개' : '▶ 시뮬레이션 시작';
+  startBtn.disabled = state.estop || state.running || state.phase==='COMPLETE';
+  document.getElementById('pauseBtn').disabled = state.estop || !state.running;
+}
 function startSim(){
-  if(state.estop || state.running) return;
-  state.running=true;
-  document.getElementById('startBtn').disabled=true;
-  document.getElementById('pauseBtn').disabled=false;
-  if(state.phase==='IDLE'){ pushLog('시뮬레이션 시작 · 상시 수면 감시 중','info'); }
+  if(state.estop || state.running || state.phase==='COMPLETE') return;
+  const resuming = state.paused;
+  state.running=true; state.paused=false;
+  updateSimControls();
+  pushLog(resuming ? '시뮬레이션 재개됨' : '시뮬레이션 시작 · 상시 수면 감시 중','info');
   simTimer = setInterval(tick, 750);
 }
 function pauseSim(){
-  state.running=false; clearInterval(simTimer);
-  document.getElementById('startBtn').disabled=false;
-  document.getElementById('pauseBtn').disabled=true;
-  pushLog('시뮬레이션 일시정지됨','info');
+  if(state.estop || !state.running) return;
+  state.running=false;
+  state.paused=state.phase!=='COMPLETE';
+  clearInterval(simTimer);
+  updateSimControls();
+  if(state.paused) pushLog('시뮬레이션 일시정지됨','info');
 }
 function resetSim(){
   closeEventModal();
   document.getElementById('cancelDispatchBtn').style.display='none';
-  clearInterval(simTimer); clearInterval(cancelTimer); state.running=false; state.estop=false;
+  clearInterval(simTimer); clearInterval(cancelTimer); state.running=false; state.paused=false; state.estop=false;
   state.phase='IDLE'; state.confidence=0; state.distance=null; screeningTicks=0; state.stepIndex=-1;
   state.battery=87; state.cancellable=false; state.currentEventMeta=null;
   state.boardPos={x:15,y:78};
   document.getElementById('estopOverlay').style.display='none';
-  document.getElementById('startBtn').disabled=false;
-  document.getElementById('pauseBtn').disabled=true;
+  updateSimControls();
   document.getElementById('alertBanner').style.display='none';
   document.getElementById('targetBox').style.display='none';
   updateModeBadge();
@@ -339,7 +344,7 @@ function resetSim(){
 }
 
 function tick(){
-  if(state.estop) return;
+  if(state.estop || !state.running) return;
   state.commLevel = state.phase==='APPROACHING' ? (Math.random()<0.15 ? 3 : 4) : 4;
 
   if(state.phase==='IDLE'){
