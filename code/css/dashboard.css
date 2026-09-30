@@ -189,6 +189,8 @@
 #cameraStatus{margin-top:8px;color:var(--text-2);}
 
 /* 요구조자 탑승 및 복귀 표시 */
+.target-person{display:none;position:absolute;left:50%;top:42%;width:56px;height:34px;fill:var(--amber);transform:translate(-50%,-50%) scaleX(1.8);pointer-events:none;}
+.det-box.alertbox .target-person{display:block;}
 .board-passenger{display:none;}
 .board-icon.carrying .board-passenger{display:block;}
 .det-box.rescued{border-color:var(--teal);transition:left .5s linear,top .5s linear;}
