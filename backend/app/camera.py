@@ -19,6 +19,7 @@ class Camera:
         self._stop = threading.Event()
         self._thread = None
         self._jpeg = None
+        self._image = None
         self._sequence = 0
         self._updated = 0.0
         self._error = None
@@ -29,6 +30,7 @@ class Camera:
                 return
             self._stop.clear()
             self._jpeg = None
+            self._image = None
             self._error = None
             self._thread = threading.Thread(target=self._capture, daemon=True)
             self._thread.start()
@@ -55,6 +57,7 @@ class Camera:
                     raise CameraUnavailable('카메라 프레임을 JPEG로 변환하지 못했습니다.')
                 with self._lock:
                     self._jpeg = jpeg.tobytes()
+                    self._image = frame.copy()
                     self._sequence += 1
                     self._updated = time.monotonic()
                 self._stop.wait(max(0, 1 / config.CAMERA_FPS - (time.monotonic() - started)))
@@ -70,6 +73,18 @@ class Camera:
                 capture.release()
 
     async def next_frame(self, after=-1):
+        """Latest JPEG for MJPEG viewers."""
+        return await self._next_sample(after, raw=False)
+
+    async def next_image(self, after=-1):
+        """Latest independent BGR image for inference, without JPEG decoding.
+
+        Consumers pass the previous sequence to skip duplicate frames. Only the
+        newest frame is retained so slow inference cannot build up a backlog.
+        """
+        return await self._next_sample(after, raw=True)
+
+    async def _next_sample(self, after, raw):
         deadline = time.monotonic() + config.CAMERA_TIMEOUT
         while time.monotonic() < deadline:
             with self._lock:
@@ -78,7 +93,7 @@ class Camera:
                 if self._stop.is_set():
                     raise CameraUnavailable('카메라 서버가 종료되었습니다.')
                 if self._jpeg is not None and self._sequence != after and time.monotonic() - self._updated < config.CAMERA_TIMEOUT:
-                    return self._sequence, self._jpeg
+                    return self._sequence, self._image.copy() if raw else self._jpeg
             await asyncio.sleep(0.02)
         raise CameraUnavailable('카메라 응답 시간이 초과되었습니다. 장치 연결을 확인하세요.')
 

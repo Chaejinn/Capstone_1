@@ -110,6 +110,11 @@ def test_shared_capture_and_release(monkeypatch):
         assert jpeg.startswith(b'\xff\xd8') and jpeg.endswith(b'\xff\xd9')
         assert asyncio.run(camera.next_frame())[0] >= sequence
         assert asyncio.run(camera.next_frame(sequence))[0] > sequence
+        image_sequence, image = asyncio.run(camera.next_image())
+        assert image.shape == (16, 16, 3)
+        image[:] = 255
+        assert not asyncio.run(camera.next_image())[1].any()
+        assert asyncio.run(camera.next_image(image_sequence))[0] > image_sequence
         assert len(captures) == 1
     finally:
         camera.close()
