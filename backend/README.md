@@ -108,3 +108,53 @@ curl http://localhost:8000/sites \
 - 이벤트 ack(구조완료) → 감사 로그 기록 → 웹소켓 브로드캐스트
 - 비상정지/해제
 - 미인증 요청 401, JWT 포함 웹소켓 연결
+
+## 8. 웹캠 MJPEG 스트리밍
+
+백엔드 컴퓨터에 연결된 USB 웹캠을 OpenCV로 읽어 JPEG 프레임으로 전송합니다.
+별도 장치의 MJPEG URL도 서버의 `DG_CAMERA_SOURCE`로 지정할 수 있습니다.
+브라우저 컴퓨터의 웹캠을 직접 업로드하는 기능은 아닙니다.
+
+```bash
+cd backend
+pip install -r requirements.txt
+DG_CAMERA_SOURCE=0 DG_CAMERA_SITE_ID=chunjeon uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1
+```
+
+| 변수 | 기본값 | 설명 |
+|---|---|---|
+| `DG_CAMERA_SOURCE` | `0` | USB 장치 인덱스 또는 서버에서 접근 가능한 MJPEG/RTSP URL |
+| `DG_CAMERA_SITE_ID` | `chunjeon` | 카메라가 연결된 사이트 |
+| `DG_CAMERA_WIDTH` / `DG_CAMERA_HEIGHT` | `1280` / `720` | 요청 해상도; 실제 해상도는 장치 지원에 따름 |
+| `DG_CAMERA_FPS` | `15` | JPEG 전송 최대 FPS (1~60) |
+| `DG_CAMERA_JPEG_QUALITY` | `80` | JPEG 품질 (1~100) |
+| `DG_CAMERA_TIMEOUT` | `5` | 첫 프레임/새 프레임 대기 제한(초) |
+
+- `GET /sites/{site_id}/camera/stream` — `multipart/x-mixed-replace; boundary=frame` 응답.
+  각 part는 `Content-Type: image/jpeg`, `Content-Length`와 JPEG 데이터로 구성됩니다.
+- 기존 `/auth/login`의 Bearer JWT가 필요합니다. 운영자/관리자만 활성 사이트의 카메라에 접근합니다.
+  `<img>` 직접 연결을 위한 `?token=<JWT>`도 지원하나, URL 로그 노출을 피하도록 Bearer 방식을 권장합니다.
+- 미인증 401, 권한/비활성 사이트 403, 없는 사이트/카메라 404, 카메라 초기 연결 실패 503.
+  전송 중 장치 오류·수신 지연 또는 JWT 만료 시 스트림을 종료합니다.
+- 한 프로세스의 캡처 스레드 하나를 모든 시청자가 공유합니다. 느린 클라이언트에는 최신 프레임만 전달합니다.
+  첫 연결 시 장치를 열고 서버 종료 시 닫습니다. USB 장치 중복 점유를 막기 위해 **worker 1개**로 실행하세요.
+  장치/드라이버의 `read()` 자체가 멈추면 서버 재시작이 필요할 수 있습니다.
+- macOS에서는 백엔드를 실행하는 터미널에 카메라 접근 권한이 필요합니다.
+
+대시보드의 **웹캠 연결 설정**에서 백엔드 주소와 **백엔드에 등록된 계정**을 입력하고
+**웹캠 연결**을 누릅니다. 기존 프론트 로그인은 localStorage 기반이므로 별도 백엔드 로그인이 필요합니다.
+비밀번호와 JWT는 저장하지 않으며, 영상 요청은 Authorization 헤더를 사용합니다.
+HTTPS 페이지에서는 백엔드도 HTTPS로 제공해야 합니다.
+시뮬레이션 일시정지는 영상 수신을 중단하지 않으며, **연결 해제**로 수신을 중단합니다.
+실제 영상 표시 중에는 가상 감지 박스·보드·ROI를 숨깁니다. 실제 AI 감지 결과 연동은 별도입니다.
+
+검증(실제 웹캠 없이 가상 프레임 사용):
+
+```bash
+pip install pytest httpx
+cd backend
+python -m pytest tests/test_camera.py
+```
+
+구현 참고: [FastAPI StreamingResponse](https://fastapi.tiangolo.com/advanced/custom-response/#streamingresponse),
+[OpenCV JPEG 인코딩](https://docs.opencv.org/4.x/d4/da8/group__imgcodecs.html).
