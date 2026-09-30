@@ -187,3 +187,9 @@
 .camera-settings label{display:flex;flex-direction:column;gap:5px;}
 .camera-settings input{width:190px;max-width:100%;}
 #cameraStatus{margin-top:8px;color:var(--text-2);}
+
+/* 요구조자 탑승 및 복귀 표시 */
+.board-passenger{display:none;}
+.board-icon.carrying .board-passenger{display:block;}
+.det-box.rescued{border-color:var(--teal);transition:left .5s linear,top .5s linear;}
+.det-box.rescued .lbl{background:var(--teal);color:var(--bg);}

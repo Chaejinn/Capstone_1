@@ -40,9 +40,9 @@ function tickClock(){
 tickClock(); setInterval(tickClock,1000);
 
 /* ---------------- NAV ---------------- */
-// 출동(경보~전개) 중에는 설정 화면 진입을 차단한다.
+// 출동(경보~복귀) 중에는 설정 화면 진입을 차단한다.
 // screenflow.puml: "S1 --> S3 : 메뉴 (출동 중 진입 차단)" / SD-07 alt "[출동 진행 중] 진입 차단 (NF-U-07)"
-const DISPATCH_PHASES = ['ALERT','APPROACHING','DEPLOYING'];
+const DISPATCH_PHASES = ['ALERT','APPROACHING','DEPLOYING','RETURNING'];
 function switchView(v){
   if(v==='settings' && state && DISPATCH_PHASES.includes(state.phase)){
     showToast('⛔ 출동 진행 중에는 설정 화면에 접근할 수 없습니다.');
@@ -70,6 +70,7 @@ const globalSettings = dgGetSettings();
 const state = {
   phase:'IDLE', running:false, paused:false, estop:false, cancellable:false, currentEventMeta:null,
   confidence:0, distance:null, battery:87, commLevel:4,
+  homePos:{x:15,y:78}, carrying:false, returnStart:null,
   boardPos:{x:15,y:78}, targetPos:{x:62,y:38}, approachPos:{x:54,y:44},
   stepIndex:-1,
   threshConf: globalSettings.threshConf ?? 0.90,
@@ -234,7 +235,8 @@ function clearEstop(){
   if(state.currentEventMeta) state.currentEventMeta.status='STOPPED';
   state.phase='IDLE'; state.confidence=0; state.distance=null;
   state.stepIndex=-1; screeningTicks=0;
-  state.boardPos={x:15,y:78};
+  state.boardPos={...state.homePos};
+  state.carrying=false; state.returnStart=null;
   document.getElementById('alertBanner').style.display='none';
   document.getElementById('targetBox').style.display='none';
   state.estop=false;
@@ -292,7 +294,8 @@ function cancelDispatch(){
   document.getElementById('cancelDispatchBtn').style.display='none';
   state.confidence=0;
   state.phase='IDLE'; state.running=false; state.paused=false; screeningTicks=0; state.stepIndex=-1; state.distance=null;
-  state.boardPos={x:15,y:78};
+  state.boardPos={...state.homePos};
+  state.carrying=false; state.returnStart=null;
   clearInterval(simTimer);
   document.getElementById('alertBanner').style.display='none';
   document.getElementById('targetBox').style.display='none';
@@ -332,7 +335,8 @@ function resetSim(){
   clearInterval(simTimer); clearInterval(cancelTimer); state.running=false; state.paused=false; state.estop=false;
   state.phase='IDLE'; state.confidence=0; state.distance=null; screeningTicks=0; state.stepIndex=-1;
   state.battery=87; state.cancellable=false; state.currentEventMeta=null;
-  state.boardPos={x:15,y:78};
+  state.boardPos={...state.homePos};
+  state.carrying=false; state.returnStart=null;
   document.getElementById('estopOverlay').style.display='none';
   updateSimControls();
   document.getElementById('alertBanner').style.display='none';
@@ -348,7 +352,9 @@ function tick(){
   state.commLevel = state.phase==='APPROACHING' ? (Math.random()<0.15 ? 3 : 4) : 4;
 
   if(state.phase==='IDLE'){
+    state.homePos={...state.boardPos};
     state.phase='SCREENING'; screeningTicks=0; state.confidence=0.35;
+    document.getElementById('alertText').textContent='⚠ 익수 감지 — ID 02';
     showTargetBox('screening');
     pushLog('경량 검출기가 이상 후보 포착 · VLM 판정 대상으로 승격','warn');
   }
@@ -378,8 +384,8 @@ function tick(){
   else if(state.phase==='APPROACHING'){
     state.distance = Math.max(0, state.distance - (1.1+Math.random()*0.4));
     const frac = 1 - Math.min(1, state.distance/40);
-    state.boardPos.x = 15 + (state.approachPos.x-15)*frac;
-    state.boardPos.y = 78 + (state.approachPos.y-78)*frac;
+    state.boardPos.x = state.homePos.x + (state.approachPos.x-state.homePos.x)*frac;
+    state.boardPos.y = state.homePos.y + (state.approachPos.y-state.homePos.y)*frac;
     renderBoard();
     if(state.distance<=2){
       state.phase='DEPLOYING'; state.stepIndex=2;
@@ -388,15 +394,45 @@ function tick(){
   }
   else if(state.phase==='DEPLOYING'){
     state.stepIndex = Math.min(4, state.stepIndex+1);
-    if(state.stepIndex===3) pushLog('요구조자 하부 진입 자세 정렬 완료','info');
+    if(state.stepIndex===3){
+      state.boardPos={...state.targetPos};
+      renderBoard();
+      pushLog('요구조자 하부 진입 자세 정렬 완료','info');
+    }
     if(state.stepIndex>=4){
-      state.phase='COMPLETE';
-      if(state.currentEventMeta) state.currentEventMeta.status='COMPLETE';
-      pushLog('🎈 부력체 전개 완료 · 상체·기도 확보 · 구조대 인계 대기','crit');
-      dgAudit('부력체 전개 완료 · 구조 시뮬레이션 종료');
-      pauseSim();
+      state.phase='RETURNING';
+      state.carrying=true;
+      state.returnStart={...state.boardPos};
+      state.distance=40;
+      state.cancellable=false;
+      clearInterval(cancelTimer);
+      document.getElementById('cancelDispatchBtn').style.display='none';
+      document.getElementById('alertText').textContent='↩ 요구조자 탑승 완료 — 출발 지점 복귀 중';
+      if(state.currentEventMeta) state.currentEventMeta.status='RETURNING';
+      renderBoard();
+      pushLog('🎈 부력체 전개 완료 · 요구조자 탑승 · 출발 지점으로 복귀 시작','info');
+      dgAudit('부력체 전개 완료 · 요구조자 탑승 후 복귀 시작');
     }
     state.battery = Math.max(0, state.battery-1);
+  }
+  else if(state.phase==='RETURNING'){
+    state.stepIndex=5;
+    state.distance=Math.max(0, state.distance-1.2);
+    const frac=1-state.distance/40;
+    state.boardPos={
+      x:state.returnStart.x+(state.homePos.x-state.returnStart.x)*frac,
+      y:state.returnStart.y+(state.homePos.y-state.returnStart.y)*frac,
+    };
+    if(state.distance===0){
+      state.boardPos={...state.homePos};
+      state.phase='COMPLETE'; state.stepIndex=6;
+      if(state.currentEventMeta) state.currentEventMeta.status='COMPLETE';
+      document.getElementById('alertText').textContent='✓ 구조 완료 — 출발 지점 도착';
+      pushLog('✓ 요구조자와 출발 지점 복귀 완료 · 구조대 인계 대기','info');
+      dgAudit('요구조자 동반 복귀 완료 · 구조 시뮬레이션 종료');
+      pauseSim();
+    }
+    renderBoard();
   }
   else if(state.phase==='COMPLETE'){
     pauseSim();
@@ -421,6 +457,15 @@ function updateAlertConf(){
 function renderBoard(){
   const el = document.getElementById('boardIcon');
   el.style.left = state.boardPos.x+'%'; el.style.top = state.boardPos.y+'%';
+  el.classList.toggle('carrying', state.carrying);
+  el.setAttribute('aria-label', state.carrying ? '요구조자가 탑승한 구조보드' : '구조보드');
+  if(state.carrying){
+    const box=document.getElementById('targetBox');
+    box.style.left=(state.boardPos.x-8)+'%';
+    box.style.top=(state.boardPos.y-10)+'%';
+    box.className='det-box rescued';
+    document.getElementById('targetLbl').textContent=state.phase==='COMPLETE' ? 'ID 02 · 구조 완료' : 'ID 02 · 탑승 / 복귀 중';
+  }
 }
 function renderStepper(){
   document.querySelectorAll('#stepper .seg').forEach(seg=>{
@@ -431,8 +476,9 @@ function renderStepper(){
   });
 }
 function updateSideStats(){
+  document.getElementById('statDistLabel').textContent = state.carrying ? '복귀 지점까지 거리' : '표적까지 거리';
   document.getElementById('statDist').textContent = state.distance===null ? '— m' : state.distance.toFixed(1)+' m';
-  document.getElementById('statSpeed').textContent = (state.phase==='APPROACHING' && state.running && !state.estop) ? '1.1 m/s' : '0.0 m/s';
+  document.getElementById('statSpeed').textContent = (['APPROACHING','RETURNING'].includes(state.phase) && state.running && !state.estop) ? '1.1 m/s' : '0.0 m/s';
   document.getElementById('statBatt').textContent = state.battery+'%';
   document.getElementById('battBar').style.width = state.battery+'%';
   document.getElementById('battBar').style.background = state.battery<25 ? 'var(--red)' : state.battery<50 ? 'var(--amber)' : 'var(--teal)';

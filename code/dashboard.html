@@ -76,7 +76,7 @@
             </svg>
             <div id="targetBox" class="det-box" style="display:none;"><span class="lbl" id="targetLbl">후보</span></div>
             <div id="boardIcon" class="board-icon" style="left:15%; top:78%;">
-              <svg viewBox="0 0 24 24" fill="none"><path d="M3 15 L21 15 L18 21 L6 21 Z" fill="var(--teal)"/><rect x="10" y="6" width="4" height="9" fill="var(--teal)"/></svg>
+              <svg viewBox="0 0 24 24" fill="none"><path d="M3 15 L21 15 L18 21 L6 21 Z" fill="var(--teal)"/><rect x="10" y="6" width="4" height="9" fill="var(--teal)"/><g class="board-passenger" fill="var(--amber)"><circle cx="12" cy="4" r="2.5"/><path d="M8 14 L9 8 Q12 6 15 8 L16 14 Z"/></g></svg>
             </div>
             <div class="readout" id="videoReadout">웹캠 연결 대기</div>
             <div id="estopOverlay" class="estop-banner" style="display:none;">
@@ -111,16 +111,16 @@
         <div class="card board-status-card">
           <h3>구조보드 상태</h3>
           <div class="stat-row"><span class="k">동작 모드</span><span class="v" id="statMode">자율</span></div>
-          <div class="stat-row"><span class="k">표적까지 거리</span><span class="v" id="statDist">— m</span></div>
+          <div class="stat-row"><span class="k" id="statDistLabel">표적까지 거리</span><span class="v" id="statDist">— m</span></div>
           <div class="stat-row"><span class="k">속도</span><span class="v" id="statSpeed">0.0 m/s</span></div>
           <div class="stat-row"><span class="k">배터리</span><span class="v" id="statBatt">87%</span></div>
           <div class="bar-track"><div class="bar-fill" id="battBar" style="width:87%;"></div></div>
           <div style="margin-top:10px; font-size:11px; color:var(--text-2); font-family:'JetBrains Mono',monospace;">진행 단계</div>
           <div class="stepper2" id="stepper">
-            <div class="seg" data-s="0"></div><div class="seg" data-s="1"></div><div class="seg" data-s="2"></div><div class="seg" data-s="3"></div><div class="seg" data-s="4"></div>
+            <div class="seg" data-s="0"></div><div class="seg" data-s="1"></div><div class="seg" data-s="2"></div><div class="seg" data-s="3"></div><div class="seg" data-s="4"></div><div class="seg" data-s="5"></div><div class="seg" data-s="6"></div>
           </div>
           <div style="display:flex; justify-content:space-between; font-size:9.5px; color:var(--text-2); margin-top:4px; font-family:'JetBrains Mono',monospace;">
-            <span>감지</span><span>출동</span><span>접근</span><span>정렬</span><span>전개</span>
+            <span>감지</span><span>출동</span><span>접근</span><span>정렬</span><span>전개</span><span>복귀</span><span>완료</span>
           </div>
           <div class="comm-status-row">
             <span class="k">통신 상태</span>
