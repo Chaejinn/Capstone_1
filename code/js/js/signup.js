@@ -14,7 +14,7 @@ function showError(msg){
   errBox.classList.add('show');
 }
 
-function attemptSignup(){
+async function attemptSignup(){
   const name = nameInput.value.trim();
   const id   = idInput.value.trim();
   const pw   = pwInput.value;
@@ -36,25 +36,16 @@ function attemptSignup(){
     showError('비밀번호가 일치하지 않습니다.');
     return;
   }
-  if(id === DG.ADMIN.id){
-    showError('사용할 수 없는 아이디입니다.');
-    return;
-  }
+  const button=document.getElementById('signupBtn');
+  if(button.disabled) return;
+  button.disabled=true;
+  try {
+    const user=await dgApi('/auth/signup', {method:'POST', body:{username:id, password:pw, name}});
+    dgSaveSession({token:user.access_token, id:user.username, name:user.name, role:user.role});
+    window.location.href='site-select.html';
+  } catch(error){ showError(error.message); }
+  finally { button.disabled=false; }
 
-  const users = dgGetUsers();
-  if(users.some(u => u.id === id)){
-    showError('이미 사용 중인 아이디입니다.');
-    return;
-  }
-
-  users.push({ id, pw, name, role:'operator', active:true });
-  dgSaveUsers(users);
-  dgAudit(`회원가입 완료 · ${id} (${name})`);
-
-  // 가입 즉시 자동 로그인
-  dgSaveSession({ role:'operator', id, name });
-  dgAudit(`로그인 성공 · ${name} (${id})`);
-  window.location.href = 'site-select.html';
 }
 
 document.getElementById('signupBtn').addEventListener('click', attemptSignup);
