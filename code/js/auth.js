@@ -1,6 +1,6 @@
 /* Server-backed authentication. Passwords stay out of browser storage. */
 const DG = {KEYS:{session:'dg_api_session'}};
-const dgData = {users:[], sites:[], settings:{}, audit:[]};
+const dgData = {users:[], sites:[], settings:{}, audit:[], roi:[]};
 function dgGetSession(){try{return JSON.parse(sessionStorage.getItem(DG.KEYS.session));}catch{return null;}}
 function dgSaveSession(value){sessionStorage.setItem(DG.KEYS.session,JSON.stringify(value));}
 function dgClearSession(){sessionStorage.removeItem(DG.KEYS.session);}
@@ -35,6 +35,10 @@ async function dgRefresh(){
  dgSaveSession({...dgGetSession(),id:me.username,name:me.name,role:me.role});
  const [sites,settings]=await Promise.all([dgApi('/sites'),dgApi('/settings')]);
  dgData.sites=sites;dgData.settings={threshConf:settings.thresh_conf,threshFrames:settings.thresh_frames};
+ const siteId=new URLSearchParams(location.search).get('site');
+ if(siteId && sites.some(site=>site.id===siteId)){
+  dgData.roi=(await dgApi(`/sites/${encodeURIComponent(siteId)}/roi`)).points;
+ }
  if(me.role==='admin'){
   const [users,audit]=await Promise.all([dgApi('/users'),dgApi('/audit')]);
   dgData.users=users.filter(u=>u.role!=='admin').map(u=>({...u,dbId:u.id,id:u.username}));

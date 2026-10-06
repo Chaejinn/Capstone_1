@@ -76,7 +76,7 @@ const state = {
   threshConf: globalSettings.threshConf ?? 0.90,
   threshFrames: globalSettings.threshFrames ?? 15,
   nightPreview:false,
-  roi:[{x:12,y:20},{x:70,y:10},{x:88,y:55},{x:55,y:88},{x:8,y:60}],
+  roi:dgData.roi.length ? dgData.roi : [{x:12,y:20},{x:70,y:10},{x:88,y:55},{x:55,y:88},{x:8,y:60}],
   log:[],
   diag:{'카메라':'ok','GPU 서버':'ok','배터리':'ok','모터':'ok','통신':'ok'},
 };
@@ -162,6 +162,14 @@ function resetRoi(){
   state.roi=[{x:12,y:20},{x:70,y:10},{x:88,y:55},{x:55,y:88},{x:8,y:60}];
   renderRoi();
   pushLog('감시 ROI가 기본값으로 초기화됨','info');
+}
+
+async function saveRoi(){
+  const siteId=new URLSearchParams(location.search).get('site');
+  try {
+    await dgApi(`/sites/${encodeURIComponent(siteId)}/roi`,{method:'PUT',body:{points:state.roi}});
+    showToast('감시 구역이 저장됐습니다.');
+  } catch(error){showToast(error.message);}
 }
 
 /* ---------------- THRESHOLDS ---------------- */

@@ -8,5 +8,6 @@ dist
 code.zip
 backend/*.db
 backend/tests
+tests
 **/__pycache__
 .env*

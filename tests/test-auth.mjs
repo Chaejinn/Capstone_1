@@ -7,6 +7,7 @@ const calls = [];
 const context = vm.createContext({
   sessionStorage: {getItem: k=>storage.get(k)||null, setItem:(k,v)=>storage.set(k,v), removeItem:k=>storage.delete(k)},
   Headers, URLSearchParams, FormData,
+  location: {search:''},
   fetch: async(url,options)=>{
     calls.push({url,options});
     const data = url.endsWith('/auth/login')

@@ -36,6 +36,8 @@ def auth(client, username="capstone1", password="20262026"):
 def test_api_mount_and_health(client):
     assert client.get("/", follow_redirects=False).headers["location"] == "/index.html"
     assert client.get("/api/health").json()["status"] == "ok"
+    assert client.get("/index.html").status_code == 200
+    assert client.get("/js/bootstrap.js").status_code == 200
     assert client.get("/api/sites").status_code == 401
 
 
