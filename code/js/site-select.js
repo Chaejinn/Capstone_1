@@ -12,15 +12,15 @@ function renderSites(){
   grid.innerHTML = sites.map(s => {
     if(s.enabled){
       return `<button class="site-card enabled" onclick="enterSite('${s.id}')">
-        <div class="site-status">${s.status}</div>
-        <div class="site-name">${s.name}</div>
-        <div class="site-meta">${s.meta}</div>
+        <div class="site-status">${dgEscape(s.status)}</div>
+        <div class="site-name">${dgEscape(s.name)}</div>
+        <div class="site-meta">${dgEscape(s.meta)}</div>
       </button>`;
     }
     return `<div class="site-card disabled">
-      <div class="site-status">${s.status}</div>
-      <div class="site-name">${s.name}</div>
-      <div class="site-meta">${s.meta}</div>
+      <div class="site-status">${dgEscape(s.status)}</div>
+      <div class="site-name">${dgEscape(s.name)}</div>
+      <div class="site-meta">${dgEscape(s.meta)}</div>
     </div>`;
   }).join('');
 }

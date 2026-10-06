@@ -53,3 +53,5 @@ async function dgSaveSettings(value){
 }
 async function dgClearAudit(){await dgApi('/audit',{method:'DELETE'});dgData.audit=[];}
 const dgReady=dgRefresh().catch(error=>{if(dgGetSession())throw error;});
+
+function dgEscape(value){return String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}

@@ -32,7 +32,7 @@ function renderOverview(){
   document.getElementById('kpiSitesActive').textContent = sites.filter(s=>s.enabled).length;
   document.getElementById('kpiAudit').textContent = audit.length;
   document.getElementById('recentAudit').innerHTML = audit.slice(-8).map(a=>
-    `<div class="audit-item"><span class="t">${a.t}</span>${a.action}</div>`).join('') || '<div class="audit-item">기록 없음</div>';
+    `<div class="audit-item"><span class="t">${dgEscape(a.t)}</span>${dgEscape(a.action)}</div>`).join('') || '<div class="audit-item">기록 없음</div>';
 }
 
 /* ---------------- USERS ---------------- */
@@ -40,41 +40,37 @@ function renderUsers(){
   const users = dgGetUsers();
   document.getElementById('userTableBody').innerHTML = users.map((u,i)=>`
     <tr>
-      <td class="mono">${u.id}</td>
-      <td>${u.name}</td>
-      <td><span class="role-pill">${u.role}</span></td>
+      <td class="mono">${dgEscape(u.id)}</td>
+      <td>${dgEscape(u.name)}</td>
+      <td><span class="role-pill">${dgEscape(u.role)}</span></td>
       <td><span class="active-pill ${u.active?'':'off'}" style="cursor:pointer;" onclick="toggleUserActive(${i})">${u.active?'● 활성':'○ 비활성'}</span></td>
       <td><button class="del-btn" onclick="removeUser(${i})">✕</button></td>
     </tr>`).join('') || '<tr><td colspan="5" class="mono">등록된 계정이 없습니다.</td></tr>';
 }
-function toggleUserActive(i){
-  const users = dgGetUsers();
-  users[i].active = !users[i].active;
-  dgSaveUsers(users);
-  dgAudit(`계정 ${users[i].active?'활성화':'비활성화'} · ${users[i].id}`);
-  renderUsers();
+async function toggleUserActive(i){
+  await adminWrite(async()=>{
+    const user=dgGetUsers()[i];
+    await dgApi(`/users/${user.dbId}/active`,{method:'PATCH',body:{active:!user.active}});
+    await dgRefresh();renderUsers();
+  });
 }
-function removeUser(i){
-  const users = dgGetUsers();
-  const removed = users.splice(i,1)[0];
-  dgSaveUsers(users);
-  dgAudit(`계정 삭제 · ${removed.id} (${removed.name})`);
-  renderUsers();
+async function removeUser(i){
+  await adminWrite(async()=>{
+    const user=dgGetUsers()[i];
+    await dgApi(`/users/${user.dbId}`,{method:'DELETE'});
+    await dgRefresh();renderUsers();
+  });
 }
-function addUser(){
-  const id = document.getElementById('newUserId').value.trim();
-  const pw = document.getElementById('newUserPw').value.trim();
-  const name = document.getElementById('newUserName').value.trim() || id;
-  if(!id || !pw){ alert('아이디와 비밀번호를 입력하세요.'); return; }
-  const users = dgGetUsers();
-  if(users.some(u=>u.id===id)){ alert('이미 존재하는 아이디입니다.'); return; }
-  users.push({id, pw, name, role:'operator', active:true});
-  dgSaveUsers(users);
-  dgAudit(`계정 생성 · ${id} (${name})`);
-  document.getElementById('newUserId').value='';
-  document.getElementById('newUserPw').value='';
-  document.getElementById('newUserName').value='';
-  renderUsers();
+async function addUser(){
+  await adminWrite(async()=>{
+    const username=document.getElementById('newUserId').value.trim();
+    const password=document.getElementById('newUserPw').value;
+    const name=document.getElementById('newUserName').value.trim()||username;
+    if(!username||!password) throw new Error('아이디와 비밀번호를 입력하세요.');
+    await dgApi('/users',{method:'POST',body:{username,password,name}});
+    await dgRefresh();renderUsers();
+    ['newUserId','newUserPw','newUserName'].forEach(id=>document.getElementById(id).value='');
+  });
 }
 
 /* ---------------- SITES ---------------- */
@@ -82,18 +78,17 @@ function renderSites(){
   const sites = dgGetSites();
   document.getElementById('siteManageCard').innerHTML = sites.map((s,i)=>`
     <div class="site-manage-row">
-      <div class="sname">${s.name}</div>
-      <div class="smeta">${s.meta} · ${s.status}</div>
+      <div class="sname">${dgEscape(s.name)}</div>
+      <div class="smeta">${dgEscape(s.meta)} · ${dgEscape(s.status)}</div>
       <div class="switch-wrap">비활성<div class="switch ${s.enabled?'on':''}" onclick="toggleSite(${i})"></div>활성</div>
     </div>`).join('');
 }
-function toggleSite(i){
-  const sites = dgGetSites();
-  sites[i].enabled = !sites[i].enabled;
-  sites[i].status = sites[i].enabled ? '운영중' : '준비중';
-  dgSaveSites(sites);
-  dgAudit(`사이트 ${sites[i].enabled?'활성화':'비활성화'} · ${sites[i].name}`);
-  renderSites();
+async function toggleSite(i){
+  await adminWrite(async()=>{
+    const site=dgGetSites()[i];
+    await dgApi(`/sites/${encodeURIComponent(site.id)}/enabled`,{method:'PATCH',body:{enabled:!site.enabled}});
+    await dgRefresh();renderSites();
+  });
 }
 
 /* ---------------- GLOBAL CONFIG ---------------- */
@@ -104,13 +99,16 @@ function renderConfig(){
   document.getElementById('gConfLbl').textContent = (s.threshConf ?? 0.90).toFixed(2);
   document.getElementById('gFrLbl').textContent = (s.threshFrames ?? 15)+' 프레임';
 }
-function updateGlobal(){
-  const threshConf = parseFloat(document.getElementById('gConf').value);
-  const threshFrames = parseInt(document.getElementById('gFr').value);
-  document.getElementById('gConfLbl').textContent = threshConf.toFixed(2);
-  document.getElementById('gFrLbl').textContent = threshFrames+' 프레임';
-  dgSaveSettings({threshConf, threshFrames});
-  document.getElementById('gSavedNote').textContent = '저장됨 · '+new Date().toLocaleTimeString('ko-KR',{hour12:false});
+async function updateGlobal(){
+  const threshConf=parseFloat(document.getElementById('gConf').value);
+  const threshFrames=parseInt(document.getElementById('gFr').value);
+  document.getElementById('gConfLbl').textContent=threshConf.toFixed(2);
+  document.getElementById('gFrLbl').textContent=threshFrames+' 프레임';
+  document.getElementById('gSavedNote').textContent='저장 중…';
+  await adminWrite(async()=>{
+    await dgSaveSettings({threshConf,threshFrames});
+    document.getElementById('gSavedNote').textContent='저장됨 · '+new Date().toLocaleTimeString('ko-KR',{hour12:false});
+  });
 }
 
 /* ---------------- DANGER ZONE ---------------- */
@@ -119,18 +117,16 @@ function dangerLogoutAll(){
   dgClearSession();
   window.location.href = 'admin-login.html';
 }
-function dangerClearAudit(){
+async function dangerClearAudit(){
   if(!confirm('감사 로그를 모두 삭제할까요?')) return;
-  dgClearAudit();
-  dgAudit('감사 로그 초기화 실행됨');
-  renderAuditFull();
+  await adminWrite(async()=>{await dgClearAudit();renderAuditFull();});
 }
-function dangerFactoryReset(){
+async function dangerFactoryReset(){
   if(!confirm('계정·사이트·설정·로그를 모두 초기화합니다. 계속할까요?')) return;
-  dgFactoryReset();
-  dgAudit('플랫폼 전체 초기화 실행됨');
-  alert('초기화되었습니다. 로그인 화면으로 이동합니다.');
-  window.location.href = 'admin-login.html';
+  await adminWrite(async()=>{
+    await dgApi('/maintenance/reset',{method:'POST'});
+    dgClearSession();location.href='admin-login.html';
+  });
 }
 
 /* ---------------- AUDIT ---------------- */
@@ -138,11 +134,11 @@ function renderAuditFull(){
   const audit = dgGetAudit();
   document.getElementById('auditCount').textContent = audit.length+'건';
   document.getElementById('auditList').innerHTML = audit.slice().reverse().map(a=>
-    `<div class="audit-item"><span class="t">${a.t}</span>${a.action}</div>`).join('') || '<div class="audit-item">기록 없음</div>';
+    `<div class="audit-item"><span class="t">${dgEscape(a.t)}</span>${dgEscape(a.action)}</div>`).join('') || '<div class="audit-item">기록 없음</div>';
 }
 function exportAudit(){
   const audit = dgGetAudit();
-  const text = audit.map(a=>`[${a.t}] ${a.action}`).join('\n');
+  const text = audit.map(a=>`[${dgEscape(a.t)}] ${dgEscape(a.action)}`).join('\n');
   const blob = new Blob([text], {type:'text/plain'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -154,3 +150,10 @@ function exportAudit(){
 
 /* ---------------- INIT ---------------- */
 renderOverview();
+
+async function adminWrite(action){
+  try {await action();} catch(error){
+    const note=document.getElementById('gSavedNote');if(note)note.textContent='저장 실패';
+    alert(error.message);
+  }
+}

@@ -84,7 +84,7 @@
             <div id="boardIcon" class="board-icon" style="left:15%; top:78%;">
               <svg viewBox="0 0 24 24" fill="none"><path d="M3 15 L21 15 L18 21 L6 21 Z" fill="var(--teal)"/><rect x="10" y="6" width="4" height="9" fill="var(--teal)"/><g class="board-passenger" fill="var(--amber)"><circle cx="12" cy="4" r="2.5"/><path d="M8 14 L9 8 Q12 6 15 8 L16 14 Z"/></g></svg>
             </div>
-            <div class="readout" id="videoReadout">웹캠 연결 대기</div>
+            <div class="readout" id="videoReadout">카메라 연동 예정 · 시뮬레이션 화면</div>
             <div id="estopOverlay" class="estop-banner" style="display:none;">
               <div style="font-size:26px;">🛑</div>
               <div style="font-size:14px; font-weight:700;">비상정지 활성 — 모든 추진 정지</div>
@@ -93,7 +93,7 @@
             </div>
           </div>
 
-          <details class="camera-settings">
+          <details class="camera-settings" hidden>
             <summary>웹캠 연결 설정</summary>
             <form id="cameraForm" class="sim-controls">
               <label>백엔드 주소 <input id="cameraServer" type="url" required placeholder="http://localhost:8000"></label>
@@ -229,6 +229,6 @@
 </div>
 
 <script src="js/auth.js"></script>
-<script src="js/bootstrap.js" data-scripts="js/dashboard.js,js/camera.js"></script>
+<script src="js/bootstrap.js" data-scripts="js/dashboard.js"></script>
 </body>
 </html>

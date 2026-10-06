@@ -6,12 +6,15 @@ Drown Guardian 백엔드 진입점.
 """
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
+from sqlalchemy.orm import Session
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 
 from . import config, models, security
 from .database import Base, SessionLocal, engine
+from .database import get_db
+from .deps import require_admin
 from .camera import camera as camera_device
 from .routers import camera, audit, auth, contacts, events, settings, sites, users, ws
 
@@ -23,8 +26,8 @@ SEED_SITES = [
 ]
 
 
-def seed_db():
-    db = SessionLocal()
+def seed_db(bind=None):
+    db = SessionLocal(**({"bind": bind} if bind is not None else {}))
     try:
         if not db.query(models.User).filter(models.User.username == config.ADMIN_ID).first():
             db.add(
@@ -59,13 +62,10 @@ def seed_db():
 async def lifespan(app: FastAPI):
     # Serialize initial schema/seed across Vercel cold starts.
     if engine.dialect.name == "postgresql":
-        with engine.connect() as lock:
-            lock.execute(text("SELECT pg_advisory_lock(721604)"))
-            try:
-                Base.metadata.create_all(bind=engine)
-                seed_db()
-            finally:
-                lock.execute(text("SELECT pg_advisory_unlock(721604)"))
+        with engine.begin() as connection:
+            connection.execute(text("SELECT pg_advisory_xact_lock(721604)"))
+            Base.metadata.create_all(bind=connection)
+            seed_db(bind=connection)
     else:
         Base.metadata.create_all(bind=engine)
         seed_db()
@@ -105,3 +105,23 @@ def health():
         connection.execute(text("SELECT 1"))
     return {"status": "ok", "camera_enabled": config.CAMERA_ENABLED,
             "realtime_enabled": not config.IS_VERCEL}
+
+
+@app.post("/maintenance/reset", tags=["maintenance"])
+def reset(db: Session = Depends(get_db), admin: models.User = Depends(require_admin)):
+    for model in (models.Event, models.Contact, models.AuditLog):
+        db.query(model).delete()
+    db.query(models.User).filter(models.User.role != "admin").delete()
+    for site in SEED_SITES:
+        row = db.get(models.Site, site["id"])
+        if row:
+            for key, value in site.items():
+                setattr(row, key, value)
+            row.set_roi([])
+    row = db.get(models.GlobalSettings, 1)
+    if row:
+        row.thresh_conf = config.DEFAULT_THRESH_CONF
+        row.thresh_frames = config.DEFAULT_THRESH_FRAMES
+    db.add(models.AuditLog(actor=admin.username, action="플랫폼 전체 초기화"))
+    db.commit()
+    return {"ok": True}
