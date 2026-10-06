@@ -8,6 +8,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
 
 from . import config, models, security
 from .database import Base, SessionLocal, engine
@@ -56,8 +57,18 @@ def seed_db():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    Base.metadata.create_all(bind=engine)
-    seed_db()
+    # Serialize initial schema/seed across Vercel cold starts.
+    if engine.dialect.name == "postgresql":
+        with engine.connect() as lock:
+            lock.execute(text("SELECT pg_advisory_lock(721604)"))
+            try:
+                Base.metadata.create_all(bind=engine)
+                seed_db()
+            finally:
+                lock.execute(text("SELECT pg_advisory_unlock(721604)"))
+    else:
+        Base.metadata.create_all(bind=engine)
+        seed_db()
     try:
         yield
     finally:
@@ -75,7 +86,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(camera.router)
+if config.CAMERA_ENABLED:
+    app.include_router(camera.router)
 app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(sites.router)
@@ -83,9 +95,13 @@ app.include_router(settings.router)
 app.include_router(contacts.router)
 app.include_router(audit.router)
 app.include_router(events.router)
-app.include_router(ws.router)
+if not config.IS_VERCEL:
+    app.include_router(ws.router)
 
 
 @app.get("/health")
 def health():
-    return {"status": "ok"}
+    with engine.connect() as connection:
+        connection.execute(text("SELECT 1"))
+    return {"status": "ok", "camera_enabled": config.CAMERA_ENABLED,
+            "realtime_enabled": not config.IS_VERCEL}

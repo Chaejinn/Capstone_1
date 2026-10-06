@@ -1,0 +1,12 @@
+.git
+.venv
+.openai
+.sites-runtime
+.sites-checkout
+.DS_Store
+dist
+code.zip
+backend/*.db
+backend/tests
+**/__pycache__
+.env*

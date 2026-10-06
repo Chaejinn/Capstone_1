@@ -7,7 +7,7 @@ VLM 판정 결과 수신 + N프레임 누적/임계값 판정(FR-JDG-003/004) + 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from .. import models, schemas
+from .. import config, models, schemas
 from ..audit import log as audit_log
 from ..database import get_db
 from ..deps import require_admin, require_operator_or_admin
@@ -31,12 +31,15 @@ def _active_event(db: Session, track_id: str) -> models.Event | None:
 
 @router.post("/vlm/classification", response_model=schemas.EventOut | None)
 async def ingest_vlm_classification(
-    body: schemas.VLMClassificationResponse, db: Session = Depends(get_db)
+    body: schemas.VLMClassificationResponse, db: Session = Depends(get_db),
+    admin: models.User = Depends(require_admin),
 ):
     """AI 추론 모듈(VLM)이 판정 결과를 이 엔드포인트로 POST한다.
     인증은 별도 서비스 토큰으로 분리하는 것이 이상적이나, 1차 구현에서는
     로컬 네트워크 내부 호출만 가정하고 개방해 둔다 (NFR-ARC-001 참고)."""
 
+    if config.IS_VERCEL:
+        raise HTTPException(503, "실제 AI 판정 연동은 후속 장치 서버에서 활성화됩니다.")
     settings_row = get_settings_row(db)
     track_id = body.track_id
 

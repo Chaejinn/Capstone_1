@@ -10,7 +10,13 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.environ.get("DG_TOKEN_EXPIRE_MIN", "480"))  # 8시간
 
 # SQLite (FR-MON-005: "SQLite (확장 시 PostgreSQL)")
-DATABASE_URL = os.environ.get("DG_DATABASE_URL", "sqlite:///./drown_guardian.db")
+DATABASE_URL = os.environ.get("DG_DATABASE_URL") or os.environ.get("POSTGRES_URL") or os.environ.get("DATABASE_URL") or "sqlite:///./drown_guardian.db"
+if DATABASE_URL.startswith(("postgres://", "postgresql://")):
+    DATABASE_URL = "postgresql+psycopg://" + DATABASE_URL.split("://", 1)[1]
+IS_VERCEL = os.environ.get("VERCEL") == "1"
+CAMERA_ENABLED = os.environ.get("DG_CAMERA_ENABLED", "0" if IS_VERCEL else "1") == "1"
+if IS_VERCEL and (DATABASE_URL.startswith("sqlite") or SECRET_KEY == "drown-guardian-dev-secret-CHANGE-ME"):
+    raise RuntimeError("Vercel requires a persistent PostgreSQL database and DG_SECRET_KEY.")
 
 # 고정 관리자 계정 (FR-SEC-004). 최초 기동 시 DB에 bcrypt 해시로 시딩됨 — 평문은 여기 최초 1회만 존재.
 ADMIN_ID = os.environ.get("DG_ADMIN_ID", "capstone1")
