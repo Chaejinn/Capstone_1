@@ -6,6 +6,7 @@ from sqlalchemy.pool import StaticPool
 
 from app import app
 from backend.app import main
+from backend.app import config, models
 from backend.app.database import Base, get_db
 
 
@@ -73,3 +74,13 @@ def test_persistent_settings_roi_and_reset(client):
 def test_vlm_requires_admin(client):
     body = {"request_id": "test", "track_id": "test", "site_id": "chunjeon", "classification": "drowning", "confidence": .95}
     assert client.post("/api/vlm/classification", json=body).status_code == 401
+
+
+def test_seed_preserves_existing_admin_after_config_change(client, monkeypatch):
+    monkeypatch.setattr(config, "ADMIN_ID", "Guardian")
+    monkeypatch.setattr(config, "ADMIN_PW", "new-test-password")
+    main.seed_db()
+    with main.SessionLocal() as db:
+        admins = db.query(models.User).filter(models.User.role == "admin").all()
+        assert len(admins) == 1
+        assert admins[0].username == "capstone1"

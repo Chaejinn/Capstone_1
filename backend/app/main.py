@@ -29,7 +29,7 @@ SEED_SITES = [
 def seed_db(bind=None):
     db = SessionLocal(**({"bind": bind} if bind is not None else {}))
     try:
-        if not db.query(models.User).filter(models.User.username == config.ADMIN_ID).first():
+        if not db.query(models.User).filter(models.User.role == "admin").first():
             db.add(
                 models.User(
                     username=config.ADMIN_ID,
