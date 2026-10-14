@@ -2,7 +2,23 @@
 (function(){
   const el = id => document.getElementById(id);
   const server = el('cameraServer');
-  server.value = localStorage.getItem('dg_camera_server') || `${location.protocol === 'https:' ? 'https:' : 'http:'}//${location.hostname || 'localhost'}:8000`;
+  const source = el('cameraSource');
+  source.value = localStorage.getItem('dg_camera_source') === 'backend' ? 'backend' : 'model';
+  server.value = localStorage.getItem(`dg_camera_${source.value}_server`) || '';
+  function updateSource(){
+    const backend = source.value === 'backend';
+    el('cameraUsernameField').hidden = !backend;
+    el('cameraUsername').required = backend;
+    el('cameraCredentialLabel').textContent = backend ? '백엔드 비밀번호' : '영상 연결 키';
+    server.placeholder = backend ? 'https://camera.example.com/api' : 'https://camera.example.com';
+  }
+  updateSource();
+  source.addEventListener('change', () => {
+    disconnect();
+    server.value = localStorage.getItem(`dg_camera_${source.value}_server`) || '';
+    el('cameraPassword').value = '';
+    updateSource();
+  });
   el('cameraUsername').value = (dgGetSession() || {}).id || '';
   let controller = null, frameUrl = null;
 
@@ -52,17 +68,25 @@
         throw new Error('올바른 HTTP 또는 HTTPS 백엔드 주소를 입력하세요.');
       }
       const root = base.href.replace(/\/$/, '');
+      if(location.protocol === 'https:' && base.protocol !== 'https:'){
+        throw new Error('배포된 화면에서는 HTTPS 영상 서버 주소를 사용하세요.');
+      }
       const site = new URLSearchParams(location.search).get('site');
       if(!site) throw new Error('사이트를 먼저 선택하세요.');
-      const body = new URLSearchParams({username:el('cameraUsername').value.trim(), password:el('cameraPassword').value});
-      const login = await checked(await fetch(`${root}/auth/login`, {method:'POST', body, signal:current.signal}));
-      const {access_token:token} = await login.json();
+      const model = source.value === 'model';
+      let token = el('cameraPassword').value;
+      if(!model){
+        const body = new URLSearchParams({username:el('cameraUsername').value.trim(), password:token});
+        const login = await checked(await fetch(`${root}/auth/login`, {method:'POST', body, signal:current.signal}));
+        token = (await login.json()).access_token;
+      }
       el('cameraPassword').value = '';
-      const response = await checked(await fetch(`${root}/sites/${encodeURIComponent(site)}/camera/stream`, {
+      const response = await checked(await fetch(model ? `${root}/stream` : `${root}/sites/${encodeURIComponent(site)}/camera/stream`, {
         headers:{Authorization:`Bearer ${token}`}, signal:current.signal, cache:'no-store',
       }));
       if(!response.headers.get('content-type')?.includes('multipart/x-mixed-replace')) throw new Error('MJPEG 응답이 아닙니다.');
-      localStorage.setItem('dg_camera_server', root);
+      localStorage.setItem(`dg_camera_${source.value}_server`, root);
+      localStorage.setItem('dg_camera_source', source.value);
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer = new Uint8Array(0);
@@ -92,9 +116,9 @@
             buffer = buffer.slice(start+length+2);
             el('cameraFeed').hidden = false;
             el('videoPanel').classList.add('camera-connected');
-            el('cameraBadge').textContent = 'LIVE';
-            el('videoReadout').textContent = 'MJPEG · 실시간 영상';
-            el('cameraStatus').textContent = '웹캠 연결됨 · 시뮬레이션 일시정지와 별도로 영상은 계속 수신합니다.';
+            el('cameraBadge').textContent = model ? 'AI LIVE' : 'LIVE';
+            el('videoReadout').textContent = model ? 'RF-DETR · ByteTrack · Moondream 실시간 분석 영상' : 'MJPEG · 실시간 영상';
+            el('cameraStatus').textContent = '실시간 영상 연결됨 · 영상의 분석 결과는 영상 서버에서 제공합니다.';
             refreshTimeout();
           }
         }
