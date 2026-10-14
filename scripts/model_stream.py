@@ -48,7 +48,7 @@ def make_server(host, port, frames, token, origin):
         def log_message(self, *_args):
             pass  # Do not record credentials or request URLs.
 
-        def headers(self, status, content_type):
+        def send_response_headers(self, status, content_type):
             self.send_response(status)
             self.send_header('Content-Type', content_type)
             self.send_header('Cache-Control', 'no-store')
@@ -81,8 +81,8 @@ def make_server(host, port, frames, token, origin):
                 self.respond(401, '영상 연결 키가 올바르지 않습니다.')
                 return
             if self.path == '/health':
-                ready = frames.next(0, timeout=0.1) is not None
-                self.headers(200 if ready else 503, 'application/json')
+                ready = not frames.closed and frames.jpeg is not None and time.monotonic() - frames.updated < 10
+                self.send_response_headers(200 if ready else 503, 'application/json')
                 self.wfile.write(json.dumps({'ready': ready}).encode())
                 return
             if self.path != '/stream':
@@ -92,7 +92,7 @@ def make_server(host, port, frames, token, origin):
             if frame is None:
                 self.respond(503, 'AI 모델에서 영상을 수신하지 못했습니다.')
                 return
-            self.headers(200, 'multipart/x-mixed-replace; boundary=frame')
+            self.send_response_headers(200, 'multipart/x-mixed-replace; boundary=frame')
             try:
                 while frame is not None:
                     sequence, jpeg = frame
@@ -105,18 +105,13 @@ def make_server(host, port, frames, token, origin):
                 pass
 
         def respond(self, status, detail):
-            self.headers(status, 'application/json')
+            self.send_response_headers(status, 'application/json')
             self.wfile.write(json.dumps({'detail': detail}).encode())
 
         def setup(self):
             super().setup()
             self.connection.settimeout(15)
 
-    # Handler uses BaseHTTPRequestHandler.headers for request headers.
-    Handler.send_response_headers = Handler.headers
-    del Handler.headers
-    Handler.headers = property(lambda self: self.__dict__['request_headers'],
-                               lambda self, value: self.__dict__.__setitem__('request_headers', value))
     return ThreadingHTTPServer((host, port), Handler)
 
 
