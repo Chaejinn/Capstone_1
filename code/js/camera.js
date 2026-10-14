@@ -23,6 +23,8 @@
   let controller = null, frameUrl = null;
 
   function clearVideo(){
+    window.dgCameraLive = false;
+    updateSimControls();
     el('cameraFeed').hidden = true;
     el('cameraFeed').removeAttribute('src');
     if(frameUrl) URL.revokeObjectURL(frameUrl);
@@ -114,6 +116,11 @@
             if(frameUrl) URL.revokeObjectURL(frameUrl);
             frameUrl = nextUrl;
             buffer = buffer.slice(start+length+2);
+            if(!window.dgCameraLive){
+              pauseSim();
+              window.dgCameraLive = true;
+              updateSimControls();
+            }
             el('cameraFeed').hidden = false;
             el('videoPanel').classList.add('camera-connected');
             el('cameraBadge').textContent = model ? 'AI LIVE' : 'LIVE';

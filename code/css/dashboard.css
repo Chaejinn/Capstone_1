@@ -214,6 +214,7 @@
 .video-panel.camera-connected .scene-buildings,.video-panel.camera-connected .scene-pier,
 .video-panel.camera-connected #boardIcon,.video-panel.camera-connected #targetBox,
 .video-panel.camera-connected #roiSvgControl{visibility:hidden;}
+.video-panel.camera-connected #alertBanner{visibility:hidden;}
 .camera-settings{margin-top:12px;font-size:12px;}
 .camera-settings label{display:flex;flex-direction:column;gap:5px;}
 .camera-settings input{width:190px;max-width:100%;}

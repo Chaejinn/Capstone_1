@@ -318,11 +318,11 @@ function cancelDispatch(){
 function updateSimControls(){
   const startBtn = document.getElementById('startBtn');
   startBtn.textContent = state.paused ? '▶ 재개' : '▶ 시뮬레이션 시작';
-  startBtn.disabled = state.estop || state.running || state.phase==='COMPLETE';
+  startBtn.disabled = window.dgCameraLive || state.estop || state.running || state.phase==='COMPLETE';
   document.getElementById('pauseBtn').disabled = state.estop || !state.running;
 }
 function startSim(){
-  if(state.estop || state.running || state.phase==='COMPLETE') return;
+  if(window.dgCameraLive || state.estop || state.running || state.phase==='COMPLETE') return;
   const resuming = state.paused;
   state.running=true; state.paused=false;
   updateSimControls();
