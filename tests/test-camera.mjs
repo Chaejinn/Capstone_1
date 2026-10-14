@@ -45,7 +45,7 @@ assert.equal(model.calls[0].options.headers.Authorization, 'Bearer private-strea
 assert.equal(model.elements.get('cameraPassword').value, '');
 assert.ok(![...model.storage.values()].join('').includes('private-stream-key'));
 assert.ok(model.sawLive, 'Split MJPEG packets render the AI video');
-assert.match(model.elements.get('cameraStatus').textContent, /終了|종료/);
+assert.match(model.elements.get('cameraStatus').textContent, /종료/);
 assert.equal(model.elements.get('cameraFeed').hidden, true);
 const mixed = await scenario('https:', 'http://camera.test');
 assert.equal(mixed.calls.length, 0);
