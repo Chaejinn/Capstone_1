@@ -38,6 +38,11 @@ async def ingest_vlm_classification(
     인증은 별도 서비스 토큰으로 분리하는 것이 이상적이나, 1차 구현에서는
     로컬 네트워크 내부 호출만 가정하고 개방해 둔다 (NFR-ARC-001 참고)."""
 
+    return await process_judgement(db, body)
+
+
+async def process_judgement(db: Session, body: schemas.VLMClassificationResponse):
+    """공통 판정 처리: 기존 VLM 입력과 AI 이미지 브리지에서 재사용한다."""
     if config.IS_VERCEL:
         raise HTTPException(503, "실제 AI 판정 연동은 후속 장치 서버에서 활성화됩니다.")
     settings_row = get_settings_row(db)

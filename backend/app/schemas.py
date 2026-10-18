@@ -191,3 +191,15 @@ class WSEnvelope(BaseModel):
     site_id: str
     timestamp: datetime
     payload: dict
+
+
+class JudgementResultIn(BaseModel):
+    """이미지 좌표를 사용하는 AI 브리지 판정. 실세계 좌표와 구분한다."""
+    track_id: int
+    img_x: float = Field(allow_inf_nan=False)
+    img_y: float = Field(allow_inf_nan=False)
+    verdict: Literal["normal_swimming", "abnormal", "drowning"]
+    confidence: float = Field(ge=0.0, le=1.0)
+    model_version: str
+    prompt_version: str
+    latency_ms: int = Field(ge=0)

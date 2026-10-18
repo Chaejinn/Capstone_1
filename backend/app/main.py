@@ -16,7 +16,7 @@ from .database import Base, SessionLocal, engine
 from .database import get_db
 from .deps import require_admin
 from .camera import camera as camera_device
-from .routers import camera, audit, auth, contacts, events, settings, sites, users, ws
+from .routers import ai_bridge, camera, audit, auth, contacts, events, settings, sites, users, ws
 
 SEED_SITES = [
     {"id": "chunjeon", "name": "금오천 일대", "meta": "CAM-01 · BOARD-01 · 실내 수조 실증", "status": "운영중", "enabled": True},
@@ -88,6 +88,7 @@ app.add_middleware(
 
 if config.CAMERA_ENABLED:
     app.include_router(camera.router)
+app.include_router(ai_bridge.router)
 app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(sites.router)
