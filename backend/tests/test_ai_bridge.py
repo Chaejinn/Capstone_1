@@ -107,3 +107,33 @@ def test_ai_client_multipart_auth_and_response(monkeypatch):
 
     monkeypatch.setattr(ai_client.httpx, 'AsyncClient', lambda **kwargs: original_client(transport=httpx.MockTransport(handle), **kwargs))
     assert asyncio.run(ai_client.detect(b'image', 'frame.jpg', 'image/jpeg', 7))['score'] == 0.95
+
+
+@pytest.mark.parametrize('status,payload,message', [
+    (401, {'error': 'unauthorized'}, '인증 실패'),
+    (500, {'error': 'unavailable'}, 'AI 서버 오류 500'),
+    (200, None, 'JSON이 아닙니다'),
+])
+def test_ai_client_upstream_errors(monkeypatch, status, payload, message):
+    import asyncio
+    import httpx
+
+    monkeypatch.setenv('DG_AI_URL', 'https://ai.example')
+    monkeypatch.setenv('DG_AI_KEY', 'test-key')
+    original_client = httpx.AsyncClient
+
+    def handle(request):
+        return httpx.Response(status, json=payload) if payload else httpx.Response(status, text='not json')
+
+    monkeypatch.setattr(ai_client.httpx, 'AsyncClient', lambda **kwargs: original_client(transport=httpx.MockTransport(handle), **kwargs))
+    with pytest.raises(ai_client.AIClientError, match=message):
+        asyncio.run(ai_client.detect(b'image', 'frame.jpg', 'image/jpeg'))
+
+
+def test_health_missing_configuration(client, monkeypatch):
+    test_client, _ = client
+    monkeypatch.delenv('DG_AI_URL', raising=False)
+    monkeypatch.delenv('DG_AI_KEY', raising=False)
+    response = test_client.post('/api/ai/health')
+    assert response.status_code == 502
+    assert '환경변수' in response.json()['detail']
