@@ -158,3 +158,19 @@ python -m pytest tests/test_camera.py
 
 구현 참고: [FastAPI StreamingResponse](https://fastapi.tiangolo.com/advanced/custom-response/#streamingresponse),
 [OpenCV JPEG 인코딩](https://docs.opencv.org/4.x/d4/da8/group__imgcodecs.html).
+
+### 외부 AI 서버 연결
+
+`DG_AI_URL`(AI 서버 기본 URL), `DG_AI_KEY`(Bearer API 키)를 백엔드 실행 환경에 설정한다.
+`DG_AI_TIMEOUT_S`는 선택 사항이며 기본값은 20초이다. 키를 코드나 Git에 저장하지 않는다.
+
+- `POST /api/ai/health`: AI 서버의 `/health` 응답 확인.
+- `POST /api/ai/detect-raw`: multipart `image`, 선택적 정수 `frame_id`를 `/detect`에 전달하고 원본 JSON 반환.
+- `POST /api/ai/frame`: 같은 입력을 판정으로 변환하고 기존 연속 프레임 임계값 및 출동 로직 실행.
+
+이미지는 최대 5 MiB이다. AI 연결 실패는 502, 응답 변환 실패는 422(판단 보류)로 반환한다.
+이 라우터는 제공된 코드대로 별도의 로그인 인증을 요구하지 않는다.
+출동 대상 사이트는 `DG_CAMERA_SITE_ID`(기본 `chunjeon`)이며, 이미지 픽셀 좌표는
+실세계 좌표로 변환하지 않는다. 좌표 보정 전 생성되는 이벤트의 실세계 좌표는 비어 있다.
+Vercel 환경에서는 기존 출동 제한에 따라 `/frame`이 503을 반환한다.
+실제 AI 응답 스키마가 정해지면 `app/routers/ai_bridge.py`의 `map_to_judgement()`를 조정한다.
