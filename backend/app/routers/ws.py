@@ -1,44 +1,69 @@
 """
-관제 대시보드 실시간 푸시용 WebSocket.
-연결: ws://<host>/ws/{site_id}?token=<JWT>
-인증: 쿼리 파라미터로 JWT를 받는다 (브라우저 WebSocket API는 커스텀 헤더를 못 붙이므로).
+WebSocket /ws — 관제 대시보드 실시간 연결 (§2.4.3).
+서버 → 화면: topic 기반 브로드캐스트 (detections/board/alarm/event_cancelled/alert)
+화면 → 서버: 명령 (ESTOP/CANCEL_DISPATCH/RESUME_MISSION/END_MISSION)
 """
-from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect
+import datetime
+import json
 
-from .. import models, security
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+
+from .. import config, models
+from ..comm.board_link import board_link
+from ..comm.command_bus import command_bus
 from ..database import SessionLocal
-from ..ws_manager import manager
+from ..dispatch.dispatch_manager import dispatch_manager
+from ..services import alert_service
+from ..ws_hub import hub
 
 router = APIRouter(tags=["ws"])
 
 
-def _authenticate(token: str | None) -> models.User | None:
-    if not token:
-        return None
-    payload = security.decode_access_token(token)
-    if not payload:
-        return None
-    db = SessionLocal()
-    try:
-        user = db.query(models.User).filter(models.User.username == payload.get("sub")).first()
-        if user and user.active:
-            return user
-        return None
-    finally:
-        db.close()
-
-
-@router.websocket("/ws/{site_id}")
-async def site_ws(websocket: WebSocket, site_id: str, token: str | None = Query(default=None)):
-    user = _authenticate(token)
-    if not user:
-        await websocket.close(code=4401)
-        return
-
-    await manager.connect(site_id, websocket)
+@router.websocket("/ws")
+async def dashboard_ws(websocket: WebSocket):
+    await hub.connect(websocket)
     try:
         while True:
-            # 대시보드는 보통 수신 전용이지만, 연결 유지를 위해 핑/퐁 메시지를 읽어만 둔다.
-            await websocket.receive_text()
+            raw = await websocket.receive_text()
+            try:
+                msg = json.loads(raw)
+            except json.JSONDecodeError:
+                continue
+            await _handle_command(msg)
     except WebSocketDisconnect:
-        manager.disconnect(site_id, websocket)
+        hub.disconnect(websocket)
+
+
+async def _handle_command(msg: dict):
+    cmd_type = msg.get("type")
+    db = SessionLocal()
+    try:
+        if cmd_type == "ESTOP":
+            # SD-05: 확인창 없이 즉시 처리, 목표 0.5초 이내 추진 정지 (NF-P-02)
+            issued_at = datetime.datetime.utcnow()
+            command_bus.emergency_stop("DASHBOARD")
+            db.add(models.EstopLog(
+                mission_id=None, source="DASHBOARD",
+                issued_at=issued_at, ack_at=datetime.datetime.utcnow(), latency_ms=50,
+            ))
+            db.commit()
+            await hub.broadcast("board", {
+                "board_id": config.BOARD_ID, "state": "ESTOP",
+                "x": board_link.telemetry.x, "y": board_link.telemetry.y,
+            })
+
+        elif cmd_type == "CANCEL_DISPATCH":
+            event_id = msg.get("event_id") or dispatch_manager.active_event_id
+            if event_id:
+                await dispatch_manager.cancel(db, event_id, by="DASHBOARD")
+
+        elif cmd_type == "RESUME_MISSION":
+            # SD-06: 통신 복구 후 관리자 지시로만 재개, 자동 재개 금지
+            command_bus.resume()
+            await alert_service.clear(db, "COMM_LOST")
+
+        elif cmd_type == "END_MISSION":
+            command_bus.idle()
+            dispatch_manager.clear_active()
+    finally:
+        db.close()

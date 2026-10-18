@@ -1,83 +1,32 @@
 """
-Drown Guardian 백엔드 진입점.
-- 기존 프론트(js/auth.js, localStorage 기반)를 그대로 대체하도록 설계됨.
-- 기동 시 테이블 생성 + 최소 시드(실제 관리자 계정 1개 + 사이트 4개 + 기본 임계값)만 넣는다.
-  가짜 운영자 placeholder 계정(chacha/kyuryang/chaejin)은 의도적으로 시드하지 않는다.
+Drown Guardian 판단 서버 진입점 — deploy.puml의 "판단 서버" 노드 중 FastAPI app 부분.
+카메라 1대·보드 1대 단일 배치를 전제하며, 로그인/사이트 개념은 두지 않는다
+(팀 공식 설계서 v0.2 기준 — erd.puml, class_srv.puml, deploy.puml).
 """
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Depends
-from sqlalchemy.orm import Session
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import text
 
-from . import config, models, security
 from .database import Base, SessionLocal, engine
-from .database import get_db
-from .deps import require_admin
-from .camera import camera as camera_device
-from .routers import ai_bridge, camera, audit, auth, contacts, events, settings, sites, users, ws
-
-SEED_SITES = [
-    {"id": "chunjeon", "name": "금오천 일대", "meta": "CAM-01 · BOARD-01 · 실내 수조 실증", "status": "운영중", "enabled": True},
-    {"id": "river-b", "name": "낙동강 체육공원", "meta": "다중 노드 확장 · 범위 외 (후속 과제)", "status": "준비중", "enabled": False},
-    {"id": "farm-c", "name": "금호강 낚시스팟", "meta": "확장 응용 · 범위 외 (후속 과제)", "status": "준비중", "enabled": False},
-    {"id": "port-d", "name": "선산대교 밑 낚시스팟", "meta": "확장 응용 · 범위 외 (후속 과제)", "status": "준비중", "enabled": False},
-]
-
-
-def seed_db(bind=None):
-    db = SessionLocal(**({"bind": bind} if bind is not None else {}))
-    try:
-        if not db.query(models.User).filter(models.User.role == "admin").first():
-            db.add(
-                models.User(
-                    username=config.ADMIN_ID,
-                    password_hash=security.hash_password(config.ADMIN_PW),
-                    name=config.ADMIN_NAME,
-                    role="admin",
-                    active=True,
-                )
-            )
-
-        for s in SEED_SITES:
-            if not db.query(models.Site).filter(models.Site.id == s["id"]).first():
-                db.add(models.Site(**s))
-
-        if not db.query(models.GlobalSettings).filter(models.GlobalSettings.id == 1).first():
-            db.add(
-                models.GlobalSettings(
-                    id=1,
-                    thresh_conf=config.DEFAULT_THRESH_CONF,
-                    thresh_frames=config.DEFAULT_THRESH_FRAMES,
-                )
-            )
-
-        db.commit()
-    finally:
-        db.close()
+from .routers import ai_bridge, calibration, config_router, events, judgement, mission, status, ws
+from .services import config_service
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Serialize initial schema/seed across Vercel cold starts.
-    if engine.dialect.name == "postgresql":
-        with engine.begin() as connection:
-            connection.execute(text("SELECT pg_advisory_xact_lock(721604)"))
-            Base.metadata.create_all(bind=connection)
-            seed_db(bind=connection)
-    else:
-        Base.metadata.create_all(bind=engine)
-        seed_db()
+    Base.metadata.create_all(bind=engine)
+    db = SessionLocal()
     try:
-        yield
+        config_service.get_active_config(db)  # 없으면 기본 config_snapshot 시드
     finally:
-        camera_device.close()
+        db.close()
+    yield
 
 
-app = FastAPI(title="Drown Guardian API", version="1.0.0", lifespan=lifespan)
+app = FastAPI(title="Drown Guardian 판단 서버", version="0.2.0", lifespan=lifespan)
 
-# 프론트엔드가 별도 포트/오리진에서 서빙되는 개발 환경을 가정 — 필요 시 배포 도메인으로 좁힐 것.
+# 로컬 Wi-Fi AP 내부에서만 동작(NFR-ARC-001) — 대시보드가 다른 포트/오리진에서 서빙될 수 있어 개방.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -86,43 +35,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-if config.CAMERA_ENABLED:
-    app.include_router(camera.router)
-app.include_router(ai_bridge.router)
-app.include_router(auth.router)
-app.include_router(users.router)
-app.include_router(sites.router)
-app.include_router(settings.router)
-app.include_router(contacts.router)
-app.include_router(audit.router)
+app.include_router(status.router)
+app.include_router(config_router.router)
+app.include_router(calibration.router)
 app.include_router(events.router)
-if not config.IS_VERCEL:
-    app.include_router(ws.router)
+app.include_router(mission.router)
+app.include_router(judgement.router)
+app.include_router(ai_bridge.router)
+app.include_router(ws.router)
 
 
 @app.get("/health")
 def health():
-    with engine.connect() as connection:
-        connection.execute(text("SELECT 1"))
-    return {"status": "ok", "camera_enabled": config.CAMERA_ENABLED,
-            "realtime_enabled": not config.IS_VERCEL}
-
-
-@app.post("/maintenance/reset", tags=["maintenance"])
-def reset(db: Session = Depends(get_db), admin: models.User = Depends(require_admin)):
-    for model in (models.Event, models.Contact, models.AuditLog):
-        db.query(model).delete()
-    db.query(models.User).filter(models.User.role != "admin").delete()
-    for site in SEED_SITES:
-        row = db.get(models.Site, site["id"])
-        if row:
-            for key, value in site.items():
-                setattr(row, key, value)
-            row.set_roi([])
-    row = db.get(models.GlobalSettings, 1)
-    if row:
-        row.thresh_conf = config.DEFAULT_THRESH_CONF
-        row.thresh_frames = config.DEFAULT_THRESH_FRAMES
-    db.add(models.AuditLog(actor=admin.username, action="플랫폼 전체 초기화"))
-    db.commit()
-    return {"ok": True}
+    return {"status": "ok"}

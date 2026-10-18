@@ -1,176 +1,81 @@
-# Drown Guardian 백엔드 (FastAPI)
+# Drown Guardian 판단 서버 (FastAPI)
 
-기존 프론트엔드(`js/auth.js`, localStorage 기반 가짜 인증)를 대체하는 실제 백엔드.
-SQLite + JWT + bcrypt 기반이며, `DG_DATABASE_URL` 환경변수만 바꾸면 PostgreSQL 등으로도 교체 가능(SRS FR-MON-005 비고 참고).
+**팀 공식 설계서 v0.2**(`erd.puml`, `class_srv.puml`, `class_ai.puml`, `deploy.puml`, `sd01~07.puml`) 기준으로
+다시 작성한 백엔드. 이전 버전(로그인/다중 사이트 프로토타입)은 설계와 맞지 않아 `backend_old/`로
+옮겨두고 이 버전으로 대체함.
 
-## 1. 설치
+## 설계와 다른 점 (구버전 대비)
+
+- **로그인/회원가입 없음.** 팀 설계서에 계정 개념이 없음 (카메라 1대·보드 1대 단일 배치, 로컬 Wi-Fi AP 안에서만 동작).
+- **사이트 개념 없음.** 단일 배치 전제라 `sites` 테이블 삭제.
+- **DB 스키마를 ERD 그대로 사용**: `drowning_event`, `event_frame`, `mission`, `estop_log`, `system_alert`, `config_snapshot`(버전관리), `calibration`, `notify_target`.
+- **API 경로/WebSocket 토픽을 설계서 §2.4.3 그대로 사용**: `/api/status`, `/api/events`, `/api/events/{id}/frames`, `/api/config/roi|judge|notify`, `/api/calibration`, `/api/mission/click-target`, `/ws`(토픽: `detections`/`board`/`alarm`/`event_cancelled`/`alert`, 명령: `ESTOP`/`CANCEL_DISPATCH`/`RESUME_MISSION`/`END_MISSION`).
+
+## 이번에 구현한 것 / 아직 시뮬레이션인 것
+
+| 계층 | 상태 |
+|---|---|
+| `api/monitor`, `storage` (config/event/alert 서비스, WebSocketHub) | ✅ 실제 구현 |
+| `dispatch`, `comm` (DispatchManager, GuidanceController, CommandBus, BoardLink) | ✅ 로직 구현, **BoardLink는 시뮬레이션** (실제 UDP·라즈베리파이 없음) |
+| `ingest`, `perception`, `judgement` (카메라·검출·추적·VLM·N프레임 누적) | ❌ AI 담당 팀원 몫 (`class_ai.puml`). 대신 `POST /api/dev/judgement`로 이미 판정된 결과를 직접 주입해서 테스트 가능 |
+| 하드웨어(RPi `board_agent`, Arduino `fw_main`) | ❌ HW 담당 팀원 몫 (`class_hw.puml`). `SimulatedBoardLink`가 대역 |
+
+AI/HW 모듈이 준비되면 `app/routers/judgement.py`(개발용 주입 엔드포인트)를 지우고, 그쪽 코드에서
+`app.dispatch.dispatch_manager.dispatch_manager.on_judgement(db, result)`을 직접 호출하면 되고,
+`app/comm/board_link.py`의 `SimulatedBoardLink`를 실제 UDP `BoardLink`로 교체하면 된다 —
+`GuidanceController`/`CommandBus`는 인터페이스가 같아서 그대로 둬도 됨.
+
+## 설치 · 실행
 
 ```bash
 cd backend
 pip install -r requirements.txt
+uvicorn app.main:app --reload
 ```
 
-## 2. 실행
-
-```bash
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-```
-
-최초 기동 시 자동으로:
-- `drown_guardian.db` (SQLite) 생성
-- 실제 관리자 계정 시드: `capstone1` / `20262026` (bcrypt 해시로 저장, 평문 노출 없음)
-- 4개 사이트 시드 (`금오천 일대` 등 — 프론트 `DG.SITES`와 동일)
-- 기본 판정 임계값 시드 (`thresh_conf=0.90`, `thresh_frames=15`)
-
-가짜 운영자 placeholder 계정(chacha/kyuryang/chaejin 등)은 **의도적으로 시드하지 않음** — 실제 운영자는 회원가입(`/auth/signup`)으로만 생성됨.
+기동 시 `drown_guardian.db`(SQLite)가 생기고, `config_snapshot` 기본값(신뢰도 0.90·15프레임)이 자동 시드됨.
 
 Swagger 문서: `http://localhost:8000/docs`
 
-## 3. 환경변수 (전부 기본값만으로도 완전히 로컬 동작 — NFR-ARC-001)
+## API 요약 (§2.4.3)
 
-| 변수 | 기본값 | 설명 |
+| 메서드 | 경로 | 설명 |
 |---|---|---|
-| `DG_SECRET_KEY` | (개발용 기본값) | JWT 서명 키. 배포 전 반드시 변경 |
-| `DG_TOKEN_EXPIRE_MIN` | `480` | 토큰 만료(분) |
-| `DG_DATABASE_URL` | `sqlite:///./drown_guardian.db` | DB 연결 문자열 |
-| `DG_ADMIN_ID` | `capstone1` | 관리자 아이디 |
-| `DG_ADMIN_PW` | `20262026` | 관리자 비밀번호(최초 시드에만 사용) |
+| GET | `/api/status` | 출동 진행 중 여부 (설정 화면 진입 차단용, NF-U-07) |
+| GET | `/api/events?from&to` | 이벤트 목록 |
+| GET | `/api/events/{id}/frames` | 근거 스냅샷 |
+| GET/PUT | `/api/config/roi` | 감시 ROI (최소 3점, EX-15) |
+| GET/PUT | `/api/config/judge` | 판정 임계값(conf_threshold/persist_frames/window_n/vlm_timeout_s) |
+| GET/POST/PATCH/DELETE | `/api/config/notify` | 알림 대상 |
+| POST | `/api/calibration` | 기준점 4점 → H 행렬·재투영오차 (0.15m 초과 시 거부) |
+| POST | `/api/mission/click-target` | 화면 클릭 목표 지정 (E-03) |
+| POST | `/api/dev/judgement` | **[개발용]** AI 판정 결과 직접 주입 |
+| WS | `/ws` | 실시간 토픽 구독 + 명령 전송 |
 
-## 4. 주요 엔드포인트
+### WebSocket
 
-### 인증
-- `POST /auth/signup` — 운영자 회원가입 (관리자 아이디로는 가입 불가)
-- `POST /auth/login` — 로그인 (form-urlencoded: `username`, `password`) → JWT 발급
-- `GET /auth/me` — 내 정보 (Bearer 토큰 필요)
+서버 → 화면 (topic 필드로 구분):
+- `board`: 보드 상태/위치/헤딩/거리/배터리/PWM
+- `alarm`: 익수 경보 요약
+- `event_cancelled`: 출동 취소 확인
+- `alert`: 시스템 경고 발생/해소 (`state: "raised"|"cleared"`)
+- `detections`: (AI 모듈 연결 전까지는 미발행)
 
-### 사용자 관리 (관리자 전용)
-- `GET /users`, `POST /users`, `PATCH /users/{id}/active`, `DELETE /users/{id}`
-
-### 사이트
-- `GET /sites` (운영자+관리자)
-- `GET/PUT /sites/{id}/roi` — ROI 폴리곤 좌표 (`[{x,y}, ...]`, 0~100 상대좌표, FR-SUR-002)
-- `PATCH /sites/{id}/enabled` (관리자)
-
-### 설정
-- `GET /settings`, `PUT /settings` (관리자) — `thresh_conf`(0.5~0.99), `thresh_frames`(5~30)
-
-### 연락처 (관리자 전용)
-- `GET/POST /contacts`, `PATCH/DELETE /contacts/{id}`
-
-### 감사 로그 (관리자 전용)
-- `GET /audit`, `DELETE /audit`
-
-### VLM 판정 수신 + 이벤트
-- `POST /vlm/classification` — VLM 모듈이 프레임 판정 결과를 보고하는 엔드포인트.
-  N프레임 연속 누적(`thresh_frames`) + 신뢰도(`thresh_conf`) 조건을 모두 만족해야
-  `Event`가 생성되고 대시보드로 `DROWNING_STATUS`/`DISPATCH_COMMAND`가 푸시됨.
-  **VLM이 `error`를 보고하면 절대 자동으로 정상/익수를 확정하지 않고 판단을 보류함.**
-- `GET /events` — 이벤트 목록 (운영자+관리자)
-- `POST /events/{id}/ack` — 경보 종료 처리 (`rescued`/`false_alarm_ack`/`track_lost`)
-- `PATCH /events/{id}/dispatch` — 출동 진행 단계 갱신 (관리자, 보드 쪽에서 호출 가정)
-- `POST /board/estop`, `POST /board/estop/clear` — 비상정지 (유일하게 남은 수동 개입)
-
-### 실시간 대시보드 푸시
-- `WS /ws/{site_id}?token=<JWT>` — 연결 후 `PERSON_COUNT`/`DROWNING_STATUS`/`DISPATCH_COMMAND`/`BOARD_TELEMETRY`
-  이벤트를 JSON으로 push 받음 (공통 봉투: `{type, site_id, timestamp, payload}`).
-
-## 5. curl 예시
-
-```bash
-# 로그인
-curl -X POST http://localhost:8000/auth/login \
-  -d "username=capstone1&password=20262026"
-
-# 회원가입
-curl -X POST http://localhost:8000/auth/signup \
-  -H "Content-Type: application/json" \
-  -d '{"username":"operator01","password":"pass1234","name":"홍길동"}'
-
-# 인증 필요 요청
-curl http://localhost:8000/sites \
-  -H "Authorization: Bearer <access_token>"
+화면 → 서버 (명령):
+```json
+{"type": "ESTOP"}
+{"type": "CANCEL_DISPATCH", "event_id": "EVT-20261015-0003"}
+{"type": "RESUME_MISSION"}
+{"type": "END_MISSION"}
 ```
 
-## 6. 프론트엔드 연동 시 참고
+## 테스트 방법 (수동 검증 완료)
 
-- `js/auth.js`의 `dg*` 함수들(로컬스토리지 기반)을 이 API에 대한 `fetch` 호출로 교체하면 됨.
-  필드명(`username`/`name`/`role`/`enabled`/`thresh_conf`/`thresh_frames` 등)은 기존 프론트 스키마와 최대한 맞춰둠.
-- 대시보드의 `state.mode`(구 AUTO/MANUAL)는 백엔드에서는 더 이상 MANUAL 값을 주지 않음 —
-  `BOARD_TELEMETRY.mode`는 `AUTO` 또는 `ESTOP`만 사용 (가상조이스틱/수동모드 삭제 반영).
-
-## 7. 테스트 방법 (수동 검증 완료된 항목)
-
-- 회원가입/로그인/`/me`, 관리자 아이디로 가입 차단(400)
-- 역할 기반 접근 제어 (운영자가 관리자 전용 라우트 접근 시 403)
-- 사이트 목록/설정 조회, 임계값 수정(범위 검증 포함)
-- VLM 판정 → N프레임 누적 → 임계값 도달 시에만 `Event` 생성 및 웹소켓 브로드캐스트
-- VLM 오류 응답 시 상태 미변경(판단 보류) 확인
-- 이벤트 ack(구조완료) → 감사 로그 기록 → 웹소켓 브로드캐스트
-- 비상정지/해제
-- 미인증 요청 401, JWT 포함 웹소켓 연결
-
-## 8. 웹캠 MJPEG 스트리밍
-
-백엔드 컴퓨터에 연결된 USB 웹캠을 OpenCV로 읽어 JPEG 프레임으로 전송합니다.
-별도 장치의 MJPEG URL도 서버의 `DG_CAMERA_SOURCE`로 지정할 수 있습니다.
-브라우저 컴퓨터의 웹캠을 직접 업로드하는 기능은 아닙니다.
-
-```bash
-cd backend
-pip install -r requirements.txt
-DG_CAMERA_SOURCE=0 DG_CAMERA_SITE_ID=chunjeon uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1
-```
-
-| 변수 | 기본값 | 설명 |
-|---|---|---|
-| `DG_CAMERA_SOURCE` | `0` | USB 장치 인덱스 또는 서버에서 접근 가능한 MJPEG/RTSP URL |
-| `DG_CAMERA_SITE_ID` | `chunjeon` | 카메라가 연결된 사이트 |
-| `DG_CAMERA_WIDTH` / `DG_CAMERA_HEIGHT` | `1280` / `720` | 요청 해상도; 실제 해상도는 장치 지원에 따름 |
-| `DG_CAMERA_FPS` | `15` | JPEG 전송 최대 FPS (1~60) |
-| `DG_CAMERA_JPEG_QUALITY` | `80` | JPEG 품질 (1~100) |
-| `DG_CAMERA_TIMEOUT` | `5` | 첫 프레임/새 프레임 대기 제한(초) |
-
-- `GET /sites/{site_id}/camera/stream` — `multipart/x-mixed-replace; boundary=frame` 응답.
-  각 part는 `Content-Type: image/jpeg`, `Content-Length`와 JPEG 데이터로 구성됩니다.
-- 기존 `/auth/login`의 Bearer JWT가 필요합니다. 운영자/관리자만 활성 사이트의 카메라에 접근합니다.
-  `<img>` 직접 연결을 위한 `?token=<JWT>`도 지원하나, URL 로그 노출을 피하도록 Bearer 방식을 권장합니다.
-- 미인증 401, 권한/비활성 사이트 403, 없는 사이트/카메라 404, 카메라 초기 연결 실패 503.
-  전송 중 장치 오류·수신 지연 또는 JWT 만료 시 스트림을 종료합니다.
-- 한 프로세스의 캡처 스레드 하나를 모든 시청자가 공유합니다. 느린 클라이언트에는 최신 프레임만 전달합니다.
-  첫 연결 시 장치를 열고 서버 종료 시 닫습니다. USB 장치 중복 점유를 막기 위해 **worker 1개**로 실행하세요.
-  장치/드라이버의 `read()` 자체가 멈추면 서버 재시작이 필요할 수 있습니다.
-- macOS에서는 백엔드를 실행하는 터미널에 카메라 접근 권한이 필요합니다.
-
-대시보드의 **웹캠 연결 설정**에서 백엔드 주소와 **백엔드에 등록된 계정**을 입력하고
-**웹캠 연결**을 누릅니다. 기존 프론트 로그인은 localStorage 기반이므로 별도 백엔드 로그인이 필요합니다.
-비밀번호와 JWT는 저장하지 않으며, 영상 요청은 Authorization 헤더를 사용합니다.
-HTTPS 페이지에서는 백엔드도 HTTPS로 제공해야 합니다.
-시뮬레이션 일시정지는 영상 수신을 중단하지 않으며, **연결 해제**로 수신을 중단합니다.
-실제 영상 표시 중에는 가상 감지 박스·보드·ROI를 숨깁니다. 실제 AI 감지 결과 연동은 별도입니다.
-
-검증(실제 웹캠 없이 가상 프레임 사용):
-
-```bash
-pip install pytest httpx
-cd backend
-python -m pytest tests/test_camera.py
-```
-
-구현 참고: [FastAPI StreamingResponse](https://fastapi.tiangolo.com/advanced/custom-response/#streamingresponse),
-[OpenCV JPEG 인코딩](https://docs.opencv.org/4.x/d4/da8/group__imgcodecs.html).
-
-### 외부 AI 서버 연결
-
-`DG_AI_URL`(AI 서버 기본 URL), `DG_AI_KEY`(Bearer API 키)를 백엔드 실행 환경에 설정한다.
-`DG_AI_TIMEOUT_S`는 선택 사항이며 기본값은 20초이다. 키를 코드나 Git에 저장하지 않는다.
-
-- `POST /api/ai/health`: AI 서버의 `/health` 응답 확인.
-- `POST /api/ai/detect-raw`: multipart `image`, 선택적 정수 `frame_id`를 `/detect`에 전달하고 원본 JSON 반환.
-- `POST /api/ai/frame`: 같은 입력을 판정으로 변환하고 기존 연속 프레임 임계값 및 출동 로직 실행.
-
-이미지는 최대 5 MiB이다. AI 연결 실패는 502, 응답 변환 실패는 422(판단 보류)로 반환한다.
-이 라우터는 제공된 코드대로 별도의 로그인 인증을 요구하지 않는다.
-출동 대상 사이트는 `DG_CAMERA_SITE_ID`(기본 `chunjeon`)이며, 이미지 픽셀 좌표는
-실세계 좌표로 변환하지 않는다. 좌표 보정 전 생성되는 이벤트의 실세계 좌표는 비어 있다.
-Vercel 환경에서는 기존 출동 제한에 따라 `/frame`이 503을 반환한다.
-실제 AI 응답 스키마가 정해지면 `app/routers/ai_bridge.py`의 `map_to_judgement()`를 조정한다.
+- ROI 3점 미만 저장 거부(EX-15), 저장 시 `config_snapshot` 버전 증가
+- 캘리브레이션 정상/오차초과 케이스, H 행렬 계산 정확도 확인
+- `normal_swimming` 판정 주입 시 출동 안 함, `drowning`+고신뢰도 주입 시 출동
+- 출동 중 추가 `drowning` 판정은 새 이벤트 생성 안 하고 경보만 (EX-13)
+- 출동 중 `/api/mission/click-target` 호출 시 409
+- 전체 미션 시뮬레이션(NAVIGATING→TERMINAL_APPROACH→ALIGNING→DEPLOYING→HOLDING) 약 3.6초 내 완료, 이벤트 상태 COMPLETED로 갱신
+- 3초 유예 내 `CANCEL_DISPATCH` 시 이벤트 CANCELLED + `is_false_positive=true`, 미션 중단
+- WebSocket 연결 시 진행 중인 미션의 `board` 텔레메트리 실시간 수신 확인

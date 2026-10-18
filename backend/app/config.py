@@ -1,40 +1,38 @@
 """
 설정값 — 환경변수로 덮어쓸 수 있음.
-NFR-ARC-001(엣지 추론, 외부 네트워크 없이 동작) 대응: 기본값만으로 완전히 로컬에서 기동 가능.
+NFR-ARC-001(외부 인터넷 없이 로컬 Wi-Fi AP 안에서 전 구간 동작)에 맞춰
+기본값만으로 완전히 로컬에서 기동 가능하게 한다.
+
+설계명세서 v0.2 §1.3.2 지연 예산: 익수 성립→출동 명령 3.0초
+(스크리닝 0.8s + VLM 1.5s + 누적판정/이벤트생성 0.2s + 프레임획득 0.1s + 예비 0.4s)
 """
 import os
 
-# JWT 서명 키. 배포 시 반드시 환경변수 DG_SECRET_KEY로 교체할 것.
-SECRET_KEY = os.environ.get("DG_SECRET_KEY", "drown-guardian-dev-secret-CHANGE-ME")
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.environ.get("DG_TOKEN_EXPIRE_MIN", "480"))  # 8시간
+DATABASE_URL = os.environ.get("DG_DATABASE_URL", "sqlite:///./drown_guardian.db")
 
-# SQLite (FR-MON-005: "SQLite (확장 시 PostgreSQL)")
-DATABASE_URL = os.environ.get("DG_DATABASE_URL") or os.environ.get("POSTGRES_URL") or os.environ.get("DATABASE_URL") or "sqlite:///./drown_guardian.db"
-if DATABASE_URL.startswith(("postgres://", "postgresql://")):
-    DATABASE_URL = "postgresql+psycopg://" + DATABASE_URL.split("://", 1)[1]
-IS_VERCEL = os.environ.get("VERCEL") == "1"
-CAMERA_ENABLED = os.environ.get("DG_CAMERA_ENABLED", "0" if IS_VERCEL else "1") == "1"
-if IS_VERCEL and (DATABASE_URL.startswith("sqlite") or SECRET_KEY == "drown-guardian-dev-secret-CHANGE-ME"):
-    raise RuntimeError("Vercel requires a persistent PostgreSQL database and DG_SECRET_KEY.")
+# FR-JDG-004 판정 임계값 기본값 (config_snapshot 최초 시드값)
+DEFAULT_CONF_THRESHOLD = 0.90
+DEFAULT_PERSIST_FRAMES = 15
+DEFAULT_WINDOW_N = 8
+DEFAULT_VLM_TIMEOUT_S = 1.5
 
-# 고정 관리자 계정 (FR-SEC-004). 최초 기동 시 DB에 bcrypt 해시로 시딩됨 — 평문은 여기 최초 1회만 존재.
-ADMIN_ID = os.environ.get("DG_ADMIN_ID", "capstone1")
-ADMIN_PW = os.environ.get("DG_ADMIN_PW", "20262026")
-ADMIN_NAME = "시스템 관리자"
+# 규모 제약: 카메라 1대 · 보드 1대 (§1.3.1 "규모" 제약사항)
+BOARD_ID = "BOARD-01"
 
-# 판정 파이프라인 기본값 (FR-JDG-004 — 전역 기본 임계값)
-DEFAULT_THRESH_CONF = 0.90
-DEFAULT_THRESH_FRAMES = 15
+# 통신 사양 (§2.4.1)
+GUIDE_HZ = 12.0                 # 서버 → 보드 유도 명령 주기 (10~15Hz)
+TELEM_HZ = 3.0                  # 보드 → 서버 텔레메트리 주기 (2~5Hz)
+LINK_TIMEOUT_SEC = 0.5          # 0.5초 미수신 시 페일세이프 (EX-01)
+LINK_LOST_HARD_SEC = 2.0        # 2초 이상 소실 시 TRACK_LOST (EX-03)
 
-# NFR-PER-001: 탐지-출동 응답 지연 목표 (경고 로그용, 강제 차단은 아님)
-DISPATCH_LATENCY_TARGET_SEC = 3.0
+# 안전
+ESTOP_TARGET_LATENCY_SEC = 0.5  # NF-P-02: 입력→추진정지 0.5초 이내
+CANCEL_GRACE_SEC = 3.0          # 출동 발행 후 3초 이내 취소 가능 (EX-12)
 
-# USB camera index or a server-configured MJPEG/RTSP URL. Never supplied by clients.
-CAMERA_SOURCE = os.environ.get("DG_CAMERA_SOURCE", "0")
-CAMERA_SITE_ID = os.environ.get("DG_CAMERA_SITE_ID", "chunjeon")
-CAMERA_WIDTH = max(1, int(os.environ.get("DG_CAMERA_WIDTH", "1280")))
-CAMERA_HEIGHT = max(1, int(os.environ.get("DG_CAMERA_HEIGHT", "720")))
-CAMERA_FPS = max(1, min(60, int(os.environ.get("DG_CAMERA_FPS", "15"))))
-CAMERA_JPEG_QUALITY = max(1, min(100, int(os.environ.get("DG_CAMERA_JPEG_QUALITY", "80"))))
-CAMERA_TIMEOUT = max(1, float(os.environ.get("DG_CAMERA_TIMEOUT", "5")))
+# 데이터 보관 (§2.1)
+RETENTION_DAYS = 30
+RETENTION_MAX_GB = 20
+
+# ROI 유효성 (EX-15)
+ROI_MIN_POINTS = 3
+CALIB_MAX_REPROJ_ERROR_M = 0.15

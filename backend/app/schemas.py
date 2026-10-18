@@ -1,80 +1,52 @@
-"""Pydantic 요청/응답 스키마.
-
-VLM 인터페이스(§VLM_인터페이스_스키마.md)와 프론트-백엔드 이벤트 스키마
-(§백엔드_프론트_이벤트_스키마.md)에서 정의한 필드명을 그대로 따른다.
-"""
+"""Pydantic 스키마 — 설계명세서 §2.4.2/2.4.3 메시지 규격을 그대로 따른다."""
 from datetime import datetime
 from typing import List, Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 
-# ---------------- Auth ----------------
+# ---------------- status ----------------
 
-class SignupRequest(BaseModel):
-    username: str = Field(min_length=6, max_length=50)
-    password: str = Field(min_length=8, max_length=128)
-    name: str = Field(min_length=1, max_length=50)
-
-
-class LoginRequest(BaseModel):
-    username: str
-    password: str
+class StatusOut(BaseModel):
+    dispatch_in_progress: bool
+    active_mission_id: Optional[int] = None
 
 
-class TokenResponse(BaseModel):
-    access_token: str
-    token_type: str = "bearer"
-    role: str
-    username: str
-    name: str
+# ---------------- events (§2.4.3 REST) ----------------
 
-
-class MeResponse(BaseModel):
-    username: str
-    name: str
-    role: str
-
-
-# ---------------- Users (admin) ----------------
-
-class UserOut(BaseModel):
-    id: int
-    username: str
-    name: str
-    role: str
-    active: bool
-
-    class Config:
-        from_attributes = True
-
-
-class UserCreateByAdmin(BaseModel):
-    username: str = Field(min_length=6, max_length=50)
-    password: str = Field(min_length=8, max_length=128)
-    name: str
-
-
-class UserActiveUpdate(BaseModel):
-    active: bool
-
-
-# ---------------- Sites ----------------
-
-class SiteOut(BaseModel):
-    id: str
-    name: str
-    meta: str
+class EventOut(BaseModel):
+    event_id: str
+    occurred_at: datetime
+    track_id: Optional[int]
+    img_x: Optional[float]
+    img_y: Optional[float]
+    world_x: Optional[float]
+    world_y: Optional[float]
+    verdict: Optional[str]
+    confidence: Optional[float]
     status: str
-    enabled: bool
+    is_false_positive: bool
+    model_version: Optional[str]
+    prompt_version: Optional[str]
+    config_version: Optional[int]
+    latency_ms: Optional[int]
 
     class Config:
         from_attributes = True
 
 
-class SiteEnabledUpdate(BaseModel):
-    enabled: bool
+class EventFrameOut(BaseModel):
+    frame_id: int
+    seq: int
+    captured_at: datetime
+    file_path: str
+    masked: bool
 
+    class Config:
+        from_attributes = True
+
+
+# ---------------- config: roi / judge / notify (E-04) ----------------
 
 class RoiPoint(BaseModel):
     x: float
@@ -85,121 +57,111 @@ class RoiUpdate(BaseModel):
     points: List[RoiPoint]
 
 
-# ---------------- Settings ----------------
-
-class GlobalSettingsOut(BaseModel):
-    thresh_conf: float
-    thresh_frames: int
+class RoiOut(BaseModel):
+    config_version: int
+    points: List[RoiPoint]
 
 
-class GlobalSettingsUpdate(BaseModel):
-    thresh_conf: float = Field(ge=0.5, le=0.99)
-    thresh_frames: int = Field(ge=5, le=30)
+class JudgeConfigUpdate(BaseModel):
+    conf_threshold: float
+    persist_frames: int
+    window_n: int
+    vlm_timeout_s: float
 
 
-# ---------------- Contacts ----------------
+class JudgeConfigOut(BaseModel):
+    config_version: int
+    conf_threshold: float
+    persist_frames: int
+    window_n: int
+    vlm_timeout_s: float
 
-class ContactOut(BaseModel):
-    id: int
-    site_id: str
+
+class NotifyTargetOut(BaseModel):
+    target_id: int
     name: str
-    phone: str
-    notify: bool
+    client_id: str
+    priority: int
+    enabled: bool
 
     class Config:
         from_attributes = True
 
 
-class ContactCreate(BaseModel):
-    site_id: str
+class NotifyTargetCreate(BaseModel):
     name: str
-    phone: str = ""
-    notify: bool = True
+    client_id: str
+    priority: int = 1
+    enabled: bool = True
 
 
-class ContactUpdate(BaseModel):
+class NotifyTargetUpdate(BaseModel):
     name: Optional[str] = None
-    phone: Optional[str] = None
-    notify: Optional[bool] = None
+    priority: Optional[int] = None
+    enabled: Optional[bool] = None
 
 
-# ---------------- Audit ----------------
+# ---------------- calibration (E-05) ----------------
 
-class AuditOut(BaseModel):
-    id: int
-    timestamp: datetime
-    actor: str
-    action: str
-
-    class Config:
-        from_attributes = True
+class CalibrationRequest(BaseModel):
+    img_points: List[List[float]]    # 4점 [[x,y],...] (이미지 픽셀)
+    world_points: List[List[float]]  # 4점 [[x,y],...] (실좌표, m)
 
 
-# ---------------- VLM 판정 인터페이스 (AI 모듈 → 서버) ----------------
-# VLM_인터페이스_스키마.md §2 기준
-
-class VLMClassificationResponse(BaseModel):
-    request_id: str
-    track_id: str
-    site_id: str
-    camera_id: str = "CAM-01"
-    classification: Literal["normal_swimming", "abnormal", "drowning"]
-    confidence: float = Field(ge=0.0, le=1.0)
-    real_x_m: Optional[float] = None
-    real_y_m: Optional[float] = None
-    evidence_frame_indices: List[int] = []
-    reasoning: Optional[str] = None
-    model_name: str = "unknown"
-    model_version: str = "unknown"
-    inference_ms: Optional[int] = None
-    error: Optional[dict] = None
+class CalibrationOut(BaseModel):
+    calib_id: int
+    h_matrix: List[List[float]]
+    reproj_error_m: float
+    accepted: bool
+    reason: Optional[str] = None
 
 
-class AckEventRequest(BaseModel):
-    """FR-MON-007(제안): 관리자가 경보를 오탐/구조완료로 확인 종료."""
-    off_reason: Literal["rescued", "false_alarm_ack", "track_lost"]
+# ---------------- mission / click-target (E-03) ----------------
+
+class ClickTargetRequest(BaseModel):
+    target_x: float  # m, 실좌표
+    target_y: float
 
 
-class EventOut(BaseModel):
-    id: int
-    site_id: str
-    track_id: str
-    state: str
-    confidence: float
-    real_x_m: Optional[float]
-    real_y_m: Optional[float]
-    dispatch_status: str
-    off_reason: Optional[str]
-    since: datetime
+class MissionOut(BaseModel):
+    mission_id: int
+    event_id: Optional[str]
+    trigger: str
+    target_x: Optional[float]
+    target_y: Optional[float]
+    started_at: datetime
     ended_at: Optional[datetime]
+    result: Optional[str]
+    fail_reason: Optional[str]
+    retries: int
+    status: str
 
     class Config:
         from_attributes = True
 
 
-class DispatchStatusUpdate(BaseModel):
-    """개입 계층(차유비 파트)이 진행 단계를 보고할 때 사용."""
-    status: Literal["DISPATCHED", "EN_ROUTE", "ARRIVED", "DEPLOYING", "COMPLETED", "CANCELLED"]
-    distance_remaining_m: Optional[float] = None
+# ---------------- judgement 수신 (AI 판단 파이프라인 → 서버, 내부용) ----------------
+# 실제 배치에서는 같은 프로세스 안에서 TemporalAggregator.onJudgement()를 직접 호출하지만,
+# AI 모듈이 아직 준비되지 않은 개발 단계에서는 이 REST 엔드포인트로 대체 입력한다.
+
+class JudgementResultIn(BaseModel):
+    track_id: int
+    img_x: float
+    img_y: float
+    verdict: Literal["normal_swimming", "abnormal", "drowning"]
+    confidence: float
+    model_version: str = "dev-stub"
+    prompt_version: str = "dev-stub"
+    latency_ms: int = 0
 
 
-# ---------------- WebSocket 이벤트 봉투 ----------------
-# 백엔드_프론트_이벤트_스키마.md §1 공통 봉투 구조
+# ---------------- WebSocket 메시지 (§2.4.3) ----------------
 
-class WSEnvelope(BaseModel):
-    type: Literal["PERSON_COUNT", "DROWNING_STATUS", "DISPATCH_COMMAND", "BOARD_TELEMETRY"]
-    site_id: str
-    timestamp: datetime
+class WSMessage(BaseModel):
+    topic: Literal["detections", "board", "alarm", "event_cancelled", "alert"]
     payload: dict
 
 
-class JudgementResultIn(BaseModel):
-    """이미지 좌표를 사용하는 AI 브리지 판정. 실세계 좌표와 구분한다."""
-    track_id: int
-    img_x: float = Field(allow_inf_nan=False)
-    img_y: float = Field(allow_inf_nan=False)
-    verdict: Literal["normal_swimming", "abnormal", "drowning"]
-    confidence: float = Field(ge=0.0, le=1.0)
-    model_version: str
-    prompt_version: str
-    latency_ms: int = Field(ge=0)
+class WSCommand(BaseModel):
+    type: Literal["ESTOP", "CANCEL_DISPATCH", "RESUME_MISSION", "END_MISSION"]
+    event_id: Optional[str] = None
