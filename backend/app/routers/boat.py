@@ -2,7 +2,7 @@
 import math
 import time
 from fastapi import APIRouter
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict
 
 router = APIRouter(prefix="/boat", tags=["boat"])
 

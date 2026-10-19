@@ -51,3 +51,7 @@ def health():
 
 from .routers import boat
 app.include_router(boat.router, prefix="/api")
+
+from pathlib import Path
+from fastapi.staticfiles import StaticFiles
+app.mount("/", StaticFiles(directory=Path(__file__).resolve().parents[2] / "code", html=True), name="frontend")
