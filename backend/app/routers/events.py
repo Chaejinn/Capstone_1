@@ -200,6 +200,8 @@ async def trigger_estop(
     user: models.User = Depends(require_operator_or_admin),
 ):
     """비상정지 (유일하게 남은 수동 개입 — FR-SAF-005/NFR-SAF-001)."""
+    from .boat import boat_control
+    boat_control.emergency_stop()
     audit_log(db, actor=user.username, action=f"비상정지 발동: site={site_id}")
     await manager.broadcast(
         site_id, "BOARD_TELEMETRY", {"board_id": "BOARD-01", "mode": "ESTOP", "comm_status": "OK"}
@@ -213,6 +215,8 @@ async def clear_estop(
     db: Session = Depends(get_db),
     user: models.User = Depends(require_operator_or_admin),
 ):
+    from .boat import boat_control
+    boat_control.clear_estop()
     audit_log(db, actor=user.username, action=f"비상정지 해제: site={site_id}")
     await manager.broadcast(
         site_id, "BOARD_TELEMETRY", {"board_id": "BOARD-01", "mode": "AUTO", "comm_status": "OK"}

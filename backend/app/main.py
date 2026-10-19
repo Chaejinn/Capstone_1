@@ -125,3 +125,6 @@ def reset(db: Session = Depends(get_db), admin: models.User = Depends(require_ad
     db.add(models.AuditLog(actor=admin.username, action="플랫폼 전체 초기화"))
     db.commit()
     return {"ok": True}
+
+from .routers import boat
+app.include_router(boat.router)
