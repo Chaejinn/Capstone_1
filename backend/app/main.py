@@ -48,3 +48,6 @@ app.include_router(ws.router)
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+from .routers import boat
+app.include_router(boat.router, prefix="/api")

@@ -226,6 +226,7 @@ function updateModeBadge(){
   else { b.textContent='자율 모드'; }
 }
 function triggerEstop(){
+  fetch("/api/boat/estop", {method:"POST"}).catch(e => pushLog("서버 비상정지 전송 실패: " + e.message, "crit"));
   state.estop=true; state.running=false; state.paused=false; state.cancellable=false;
   closeEventModal();
   switchView('control');
@@ -239,7 +240,11 @@ function triggerEstop(){
   pushLog('🛑 비상정지 발동 — 모든 추진 즉시 정지 (FR-SAF-004)','crit');
   dgAudit('비상정지 발동 · dashboard');
 }
-function clearEstop(){
+async function clearEstop(){
+  try {
+    const r = await fetch("/api/boat/estop/clear", {method:"POST"});
+    if (!r.ok) throw new Error(r.status);
+  } catch(e) { pushLog("서버 비상정지 해제 실패: " + e.message, "crit"); return; }
   if(state.currentEventMeta) state.currentEventMeta.status='STOPPED';
   state.phase='IDLE'; state.confidence=0; state.distance=null;
   state.stepIndex=-1; screeningTicks=0;

@@ -11,12 +11,16 @@ class CommandBus:
         board_link.send_guide(heading_error_deg, speed)
 
     def emergency_stop(self, source: str):
+        from ..routers.boat import boat_control
+        boat_control.emergency_stop()
         board_link.estop()
 
     def stop(self):
         board_link.send_stop()
 
     def resume(self):
+        from ..routers.boat import boat_control
+        boat_control.clear_estop()
         board_link.resume()
 
     def idle(self):
