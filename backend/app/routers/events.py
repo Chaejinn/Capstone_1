@@ -8,7 +8,7 @@ from .. import schemas
 from ..database import get_db
 from ..services import event_repository
 
-router = APIRouter(prefix="/api", tags=["events"])
+router = APIRouter(prefix="/api/mission", tags=["events"])
 
 
 @router.get("/events", response_model=list[schemas.EventOut])

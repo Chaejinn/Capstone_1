@@ -7,8 +7,8 @@ from sqlalchemy.pool import StaticPool
 from importlib import import_module
 from app import app, platform_backend as main, config
 
-models = import_module("backend(org).app.models")
-database = import_module("backend(org).app.database")
+models = import_module("backend.platform.models")
+database = import_module("backend.platform.database")
 Base, get_db = database.Base, database.get_db
 
 

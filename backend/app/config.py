@@ -8,7 +8,7 @@ NFR-ARC-001(외부 인터넷 없이 로컬 Wi-Fi AP 안에서 전 구간 동작)
 """
 import os
 
-DATABASE_URL = os.environ.get("DG_DATABASE_URL", "sqlite:///./drown_guardian.db")
+from backend.platform.config import DATABASE_URL, IS_VERCEL
 
 # FR-JDG-004 판정 임계값 기본값 (config_snapshot 최초 시드값)
 DEFAULT_CONF_THRESHOLD = 0.90

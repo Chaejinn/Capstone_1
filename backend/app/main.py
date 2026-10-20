@@ -1,57 +1,67 @@
-"""
-Drown Guardian 판단 서버 진입점 — deploy.puml의 "판단 서버" 노드 중 FastAPI app 부분.
-카메라 1대·보드 1대 단일 배치를 전제하며, 로그인/사이트 개념은 두지 않는다
-(팀 공식 설계서 v0.2 기준 — erd.puml, class_srv.puml, deploy.puml).
-"""
+"""Unified platform: authentication, camera, judgement and boat APIs."""
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
+from fastapi.staticfiles import StaticFiles
 
+from backend.platform import config as platform_config, main as platform
+from backend.platform.routers import auth, users, sites, settings, contacts, audit
+from backend.platform.routers import camera, events as platform_events, ai_bridge as platform_ai, ws as platform_ws
 from .database import Base, SessionLocal, engine
-from .routers import ai_bridge, calibration, config_router, events, judgement, mission, status, ws
+from .routers import ai_bridge, boat, calibration, config_router, events, judgement, mission, status, ws
 from .services import config_service
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
-    Base.metadata.create_all(bind=engine)
-    db = SessionLocal()
-    try:
-        config_service.get_active_config(db)  # 없으면 기본 config_snapshot 시드
-    finally:
-        db.close()
-    yield
+async def lifespan(application):
+    # Both model sets register with the same Base before platform schema creation.
+    async with platform.lifespan(application):
+        if not platform_config.IS_VERCEL:
+            with SessionLocal() as db:
+                config_service.get_active_config(db)
+        try:
+            yield
+        finally:
+            if not platform_config.IS_VERCEL:
+                from .dispatch.guidance_controller import guidance_controller
+                from .dispatch.dispatch_manager import dispatch_manager
+                import asyncio
+                task = guidance_controller._task
+                if task and not task.done():
+                    task.cancel()
+                    try:
+                        await task
+                    except asyncio.CancelledError:
+                        pass
+                dispatch_manager.clear_active()
 
 
-app = FastAPI(title="Drown Guardian 판단 서버", version="0.2.0", lifespan=lifespan)
+app = FastAPI(title="Drown Guardian 통합 서버", version="1.1.0", lifespan=lifespan,
+              docs_url="/api/docs", openapi_url="/api/openapi.json")
 
-# 로컬 Wi-Fi AP 내부에서만 동작(NFR-ARC-001) — 대시보드가 다른 포트/오리진에서 서빙될 수 있어 개방.
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-app.include_router(status.router)
-app.include_router(config_router.router)
-app.include_router(calibration.router)
-app.include_router(events.router)
-app.include_router(mission.router)
-app.include_router(judgement.router)
-app.include_router(ai_bridge.router)
-app.include_router(ws.router)
+for router in (auth.router, users.router, sites.router, settings.router, contacts.router,
+               audit.router, platform_events.router, platform_ai.router, boat.router):
+    app.include_router(router, prefix="/api")
+if platform_config.CAMERA_ENABLED:
+    app.include_router(camera.router, prefix="/api")
+if not platform_config.IS_VERCEL:
+    app.include_router(platform_ws.router, prefix="/api")
+    for router in (status.router, config_router.router, calibration.router, events.router,
+                   mission.router, judgement.router, ai_bridge.router, ws.router):
+        app.include_router(router)
 
 
-@app.get("/health")
+@app.get("/api/health")
 def health():
-    return {"status": "ok"}
+    return {**platform.health(), "judgement_enabled": not platform_config.IS_VERCEL}
 
-from .routers import boat
-app.include_router(boat.router, prefix="/api")
 
-from pathlib import Path
-from fastapi.staticfiles import StaticFiles
-app.mount("/", StaticFiles(directory=Path(__file__).resolve().parents[2] / "code", html=True), name="frontend")
+@app.get("/", include_in_schema=False)
+def index():
+    return RedirectResponse("/index.html")
+
+
+if not platform_config.IS_VERCEL:
+    app.mount("/", StaticFiles(directory=Path(__file__).resolve().parents[2] / "code"), name="frontend")
