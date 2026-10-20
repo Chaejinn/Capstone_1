@@ -15,7 +15,7 @@ from .. import ai_client, schemas
 from ..database import get_db
 from ..dispatch.dispatch_manager import dispatch_manager
 
-router = APIRouter(prefix="/api/ai", tags=["ai"])
+router = APIRouter(prefix="/ai", tags=["ai"])
 
 MAX_IMAGE_BYTES = 5 * 1024 * 1024  # AI 서버 제한 5 MiB
 

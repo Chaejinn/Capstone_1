@@ -19,7 +19,7 @@ async def lifespan(application):
     # Both model sets register with the same Base before platform schema creation.
     async with platform.lifespan(application):
         if not platform_config.IS_VERCEL:
-            with SessionLocal() as db:
+            with platform.SessionLocal() as db:
                 config_service.get_active_config(db)
         try:
             yield
@@ -44,6 +44,7 @@ app = FastAPI(title="Drown Guardian 통합 서버", version="1.1.0", lifespan=li
 for router in (auth.router, users.router, sites.router, settings.router, contacts.router,
                audit.router, platform_events.router, platform_ai.router, boat.router):
     app.include_router(router, prefix="/api")
+app.add_api_route("/api/maintenance/reset", platform.reset, methods=["POST"], tags=["maintenance"])
 if platform_config.CAMERA_ENABLED:
     app.include_router(camera.router, prefix="/api")
 if not platform_config.IS_VERCEL:
