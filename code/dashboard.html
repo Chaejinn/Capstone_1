@@ -64,6 +64,7 @@
           <div class="video-panel" id="videoPanel">
             <div class="scene-buildings"></div><div class="scene-pier"></div>
             <img id="cameraFeed" class="camera-feed" alt="실시간 웹캠 영상" hidden>
+            <video id="localCameraFeed" class="camera-feed" autoplay muted playsinline hidden aria-label="이 기기 카메라 영상"></video>
             <div class="live-badge" id="cameraBadge">시뮬레이션</div>
             <div class="ir-badge" id="irBadge" style="display:none;">IR</div>
             <div id="alertBanner" class="alert-banner" style="display:none;">
@@ -96,7 +97,7 @@
           <details class="camera-settings" open>
             <summary>실시간 카메라 연결</summary>
             <form id="cameraForm" class="sim-controls">
-              <label>영상 소스 <select id="cameraSource"><option value="model">AI 분석 영상</option><option value="backend">기존 웹캠 서버</option></select></label>
+              <label>영상 소스 <select id="cameraSource"><option value="local">이 기기 카메라</option><option value="model">AI 분석 영상</option><option value="backend">기존 웹캠 서버</option></select></label>
               <label>영상 서버 주소 <input id="cameraServer" type="url" required placeholder="https://camera.example.com"></label>
               <label id="cameraUsernameField" hidden>백엔드 아이디 <input id="cameraUsername" autocomplete="username"></label>
               <label><span id="cameraCredentialLabel">영상 연결 키</span> <input id="cameraPassword" type="password" autocomplete="off" required></label>

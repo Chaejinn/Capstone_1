@@ -3,14 +3,21 @@
   const el = id => document.getElementById(id);
   const server = el('cameraServer');
   const source = el('cameraSource');
-  source.value = localStorage.getItem('dg_camera_source') === 'backend' ? 'backend' : 'model';
+  const savedSource = localStorage.getItem('dg_camera_source');
+  source.value = ['local', 'backend', 'model'].includes(savedSource) ? savedSource : 'local';
   server.value = localStorage.getItem(`dg_camera_${source.value}_server`) || '';
   function updateSource(){
     const backend = source.value === 'backend';
+    const local = source.value === 'local';
+    server.parentElement.hidden = local;
+    server.required = !local;
+    el('cameraPassword').parentElement.hidden = local;
+    el('cameraPassword').required = !local;
     el('cameraUsernameField').hidden = !backend;
     el('cameraUsername').required = backend;
     el('cameraCredentialLabel').textContent = backend ? '백엔드 비밀번호' : '영상 연결 키';
     server.placeholder = backend ? 'https://camera.example.com/api' : 'https://camera.example.com';
+    el('cameraStatus').textContent = local ? '영상 연결을 누르고 브라우저의 카메라 접근을 허용하세요. 로컬 미리보기에는 AI 분석이 적용되지 않습니다.' : '영상 서버 주소와 인증 정보를 입력하세요.';
   }
   updateSource();
   source.addEventListener('change', () => {
@@ -21,8 +28,16 @@
   });
   el('cameraUsername').value = (dgGetSession() || {}).id || '';
   let controller = null, frameUrl = null;
+  let localStream = null;
 
   function clearVideo(){
+    if(localStream){
+      localStream.getTracks().forEach(track => { track.onended = null; track.stop(); });
+      localStream = null;
+    }
+    el('localCameraFeed').pause();
+    el('localCameraFeed').srcObject = null;
+    el('localCameraFeed').hidden = true;
     window.dgCameraLive = false;
     updateSimControls();
     el('cameraFeed').hidden = true;
@@ -58,6 +73,37 @@
     el('cameraConnectBtn').disabled = true;
     el('cameraDisconnectBtn').disabled = false;
     el('cameraStatus').textContent = '웹캠 연결 중…';
+    if(source.value === 'local'){
+      try{
+        if(!navigator.mediaDevices?.getUserMedia) throw new Error('카메라는 HTTPS 또는 localhost 주소에서 사용할 수 있습니다.');
+        const stream = await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1920},height:{ideal:1080}},audio:false});
+        if(controller !== current){ stream.getTracks().forEach(track => track.stop()); return; }
+        localStream = stream;
+        const video = el('localCameraFeed');
+        video.srcObject = stream;
+        await video.play();
+        if(controller !== current) return;
+        stream.getVideoTracks().forEach(track => { track.onended = () => {
+          if(controller !== current) return;
+          disconnect();
+          el('cameraStatus').textContent = '카메라 연결이 종료되었습니다. 다시 연결하세요.';
+        }; });
+        pauseSim();
+        window.dgCameraLive = true;
+        updateSimControls();
+        video.hidden = false;
+        el('videoPanel').classList.add('camera-connected');
+        el('cameraBadge').textContent = 'LOCAL LIVE';
+        el('videoReadout').textContent = '이 기기 카메라 · 실시간 영상';
+        el('cameraStatus').textContent = '로컬 카메라 연결됨 · AI 분석은 적용되지 않습니다.';
+        localStorage.setItem('dg_camera_source', 'local');
+      }catch(error){
+        if(controller !== current) return;
+        disconnect();
+        el('cameraStatus').textContent = error.name === 'NotAllowedError' ? '브라우저와 macOS 설정에서 카메라 접근을 허용하세요.' : error.name === 'NotFoundError' ? '사용 가능한 카메라가 없습니다.' : error.message;
+      }
+      return;
+    }
     let watchdog;
     const refreshTimeout = () => {
       clearTimeout(watchdog);
