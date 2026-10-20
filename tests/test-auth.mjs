@@ -29,3 +29,13 @@ assert.equal(calls.find(c=>c.url==='/api/sites').options.headers.get('Authorizat
 await vm.runInContext('dgSaveSettings({threshConf:.93,threshFrames:18})',context);
 assert.equal(calls.at(-1).options.method,'PUT');
 console.log('Server authentication and settings integration OK');
+
+context.fetch = async()=>({ok:false,status:422,json:async()=>({detail:[{loc:['body','username'],type:'string_too_short',ctx:{min_length:6}}]})});
+await assert.rejects(vm.runInContext("dgApi('/auth/signup')",context),/아이디: 6자 이상/);
+context.fetch = async()=>({ok:false,status:405,json:async()=>null});
+await assert.rejects(vm.runInContext("dgApi('/auth/login')",context),/HTTP 405/);
+context.fetch = async()=>({ok:true,json:async()=>{throw new Error('HTML');}});
+await assert.rejects(vm.runInContext("dgApi('/auth/login')",context),/API 대신 웹페이지/);
+context.location.protocol='file:';
+await assert.rejects(vm.runInContext("dgApi('/auth/login')",context),/HTML 파일을 직접/);
+console.log('Authentication validation and wrong-server errors OK');
