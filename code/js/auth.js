@@ -10,19 +10,34 @@ function dgRequireRole(roles,fallback='index.html'){
  return session;
 }
 async function dgApi(path,options={}){
+ if(location.protocol==='file:') throw new Error('HTML 파일을 직접 열면 로그인할 수 없습니다. http://127.0.0.1:8000 에서 접속하세요.');
  const headers=new Headers(options.headers), session=dgGetSession();
  if(session?.token) headers.set('Authorization',`Bearer ${session.token}`);
  let body=options.body;
  if(body && !(body instanceof URLSearchParams) && !(body instanceof FormData)){
   headers.set('Content-Type','application/json');body=JSON.stringify(body);
  }
- const response=await fetch(`/api${path}`,{...options,headers,body});
+ let response;
+ try{response=await fetch(`/api${path}`,{...options,headers,body});}
+ catch{throw new Error('서버에 연결할 수 없습니다. 로컬 서버 실행 여부와 http://127.0.0.1:8000 주소를 확인하세요.');}
  const data=await response.json().catch(()=>null);
  if(!response.ok){
   if(response.status===401 && path!=='/auth/login') dgClearSession();
   const detail=data?.detail;
-  throw new Error(typeof detail==='string'?detail:'요청을 처리하지 못했습니다. 입력 값과 서버 연결을 확인하세요.');
+  if(typeof detail==='string') throw new Error(detail);
+  if(Array.isArray(detail)){
+   const labels={username:'아이디',password:'비밀번호',name:'이름'};
+   throw new Error(detail.map(item=>{
+    const field=labels[item.loc?.at(-1)]||item.loc?.at(-1)||'입력 값';
+    if(item.type==='missing') return `${field}을(를) 입력하세요.`;
+    if(item.type==='string_too_short') return `${field}: ${item.ctx?.min_length}자 이상 입력하세요.`;
+    if(item.type==='string_too_long') return `${field}: ${item.ctx?.max_length}자 이하로 입력하세요.`;
+    return `${field}: ${item.msg}`;
+   }).join(' '));
+  }
+  throw new Error(`API 요청 실패 (HTTP ${response.status}). 로컬 화면은 http://127.0.0.1:8000 에서 접속하세요.`);
  }
+ if(data===null) throw new Error('API 대신 웹페이지가 응답했습니다. http://127.0.0.1:8000 에서 접속하세요.');
  return data;
 }
 async function dgLogin(username,password){
