@@ -6,11 +6,12 @@ async function scenario(protocol, address){
   const elements = new Map();
   const element = id => {
     if(!elements.has(id)) elements.set(id, {value:'', hidden:false, disabled:false,
+      parentElement:{hidden:false}, pause(){},
       classList:{add(){},remove(){}}, handlers:{},
       addEventListener(type, fn){this.handlers[type]=fn;}, removeAttribute(){}});
     return elements.get(id);
   };
-  const storage = new Map(), calls = [];
+  const storage = new Map([['dg_camera_source','model']]), calls = [];
   const jpeg = new Uint8Array([255,216,1,2,255,217]);
   const header = new TextEncoder().encode(`--frame\r\nContent-Type: image/jpeg\r\nContent-Length: ${jpeg.length}\r\n\r\n`);
   const packet = new Uint8Array(header.length + jpeg.length + 2);
