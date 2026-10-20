@@ -3,23 +3,32 @@
 ## 로컬 통합 실행
 
 저장소 루트에서 `python3 -m uvicorn app:app --host 127.0.0.1 --port 8000`으로 실행합니다.
-`app.py`가 두 백엔드의 시작·종료 처리를 함께 실행합니다.
+`app.py`는 `backend.app.main`의 단일 FastAPI 앱을 실행합니다.
+`backend/platform`에는 인증·사이트·카메라 기능, `backend/app`에는 판단·미션·보트 기능이 있으며
+DB 엔진·세션·테이블 메타데이터를 공유합니다. `backend(org)`는 실행에 사용하지 않는 참고 원본입니다.
 
-- `/api`: `backend(org)`의 로그인·사이트·관리자·인증된 카메라 스트림
+- `/api/auth`, `/api/sites`, `/api/users`: 계정·사이트·관리자 API
+- `/api/sites/{site_id}/camera/stream`: 로그인 인증된 서버 카메라 스트림
 - `/api/boat`: 실제 보트 명령 및 비상정지 API
-- `/judgement/api`: `backend`의 판단·설정·이벤트·미션 API
-- `/judgement/ws`: 판단 서버 실시간 WebSocket
-- `/api/docs`, `/judgement/docs`: 각 백엔드의 API 문서
+- `/api/status`, `/api/config`, `/api/calibration`, `/api/mission`: 판단·설정·미션 API
+- `/api/mission/events`: 판단 서버 이벤트 (`/api/events`는 플랫폼 이벤트)
+- `/api/ai`: 플랫폼 AI 프레임 누적 판정
+- `/api/judgement/ai`: 판단 서버 직접 AI 연동
+- `/api/ws/{site_id}`, `/ws`: 사이트별 푸시 및 판단 서버 WebSocket
+- `/api/docs`: 전체 API 문서
 
 관리자 로그인은 `http://127.0.0.1:8000/admin-login.html`에서 합니다.
 사이트 선택 후 대시보드에서 **기존 웹캠 서버**를 선택하고, 서버 주소에
 `http://127.0.0.1:8000/api`와 백엔드 로그인 정보를 입력하면 서버 카메라 영상을 봅니다.
-**이 기기 카메라**는 브라우저가 직접 카메라를 여는 방식이며 서버 영상과 별개입니다.
-동일 카메라를 서버와 브라우저에서 동시에 열지 않는 것을 권장합니다.
+**이 기기 카메라**는 브라우저에서 직접 카메라를 여는 방식입니다.
+동일 카메라를 서버와 브라우저에서 동시에 사용하지 않는 것을 권장합니다.
+서버 카메라 사용에는 `python3 -m pip install opencv-python`이 추가로 필요합니다.
 
-판단 API를 함께 제공하는 것과 AI 판정→대시보드 상태→실제 출동의 자동 연결은 별개입니다.
-현재 대시보드 구조 진행은 시뮬레이션이며, 판단 서버의 기본 BoardLink도 시뮬레이션입니다.
-판단 백엔드는 로컬 실행 시에만 마운트합니다.
+판단 API 제공과 AI 판정→대시보드 상태→실제 출동의 자동 연결은 별개입니다.
+현재 대시보드 구조 진행과 판단 서버의 기본 BoardLink는 시뮬레이션입니다.
+판단·미션·WebSocket은 로컬에서 활성화하며 Vercel에서는 비활성화합니다.
+
+검증: `python3 -m unittest discover -s tests -p test_unified_server.py -v`
 
 저장소 루트에서 배포합니다. `code/`만 배포하면 API가 포함되지 않습니다.
 
