@@ -66,4 +66,11 @@ def index():
 
 
 if not platform_config.IS_VERCEL:
+    @app.middleware('http')
+    async def disable_local_page_cache(request, call_next):
+        response = await call_next(request)
+        if not request.url.path.startswith(('/api/', '/ws')):
+            response.headers['Cache-Control'] = 'no-store, max-age=0'
+        return response
+
     app.mount("/", StaticFiles(directory=Path(__file__).resolve().parents[2] / "code"), name="frontend")
