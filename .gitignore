@@ -9,3 +9,4 @@ public/
 *.db
 .vercel
 .env*
+local-model/

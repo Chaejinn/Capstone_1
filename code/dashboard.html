@@ -64,7 +64,8 @@
           <div class="video-panel" id="videoPanel">
             <div class="scene-buildings"></div><div class="scene-pier"></div>
             <img id="cameraFeed" class="camera-feed" alt="실시간 웹캠 영상" hidden>
-            <video id="localCameraFeed" class="camera-feed" autoplay muted playsinline hidden aria-label="이 기기 카메라 영상"></video>
+            <video id="localCameraFeed" class="camera-feed" autoplay muted playsinline hidden aria-label="AI 분석 카메라 영상"></video>
+            <canvas id="cameraOverlay" hidden style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:2;pointer-events:none" aria-label="AI 탐지 결과"></canvas>
             <div class="live-badge" id="cameraBadge">시뮬레이션</div>
             <div class="ir-badge" id="irBadge" style="display:none;">IR</div>
             <div id="alertBanner" class="alert-banner" style="display:none;">
@@ -97,14 +98,10 @@
           <details class="camera-settings" open>
             <summary>실시간 카메라 연결</summary>
             <form id="cameraForm" class="sim-controls">
-              <label>영상 소스 <select id="cameraSource"><option value="local">이 기기 카메라</option><option value="model">AI 분석 영상</option><option value="backend">기존 웹캠 서버</option></select></label>
-              <label>영상 서버 주소 <input id="cameraServer" type="url" required placeholder="https://camera.example.com"></label>
-              <label id="cameraUsernameField" hidden>백엔드 아이디 <input id="cameraUsername" autocomplete="username"></label>
-              <label><span id="cameraCredentialLabel">영상 연결 키</span> <input id="cameraPassword" type="password" autocomplete="off" required></label>
-              <button class="btn primary" id="cameraConnectBtn" type="submit">영상 연결</button>
+              <button class="btn primary" id="cameraConnectBtn" type="submit">카메라 연결 · AI 분석</button>
               <button class="btn" id="cameraDisconnectBtn" type="button" disabled>연결 해제</button>
             </form>
-            <p id="cameraStatus" role="status">AI 모델 영상 서버의 주소와 연결 키를 입력하세요. 배포된 화면에서는 HTTPS 주소가 필요합니다.</p>
+            <p id="cameraStatus" role="status">카메라를 허용하면 영상 프레임을 Modal AI 서버로 보내 분석합니다. 분석 결과는 화면에 표시되며 자동 출동은 실행하지 않습니다.</p>
           </details>
 
           <div class="sim-controls">
