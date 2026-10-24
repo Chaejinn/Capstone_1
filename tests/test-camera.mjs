@@ -2,53 +2,44 @@ import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
 
-async function scenario(protocol, address){
-  const elements = new Map();
-  const element = id => {
-    if(!elements.has(id)) elements.set(id, {value:'', hidden:false, disabled:false,
-      parentElement:{hidden:false}, pause(){},
-      classList:{add(){},remove(){}}, handlers:{},
-      addEventListener(type, fn){this.handlers[type]=fn;}, removeAttribute(){}});
+async function scenario({result, error, deferredCamera=false}){
+  const elements=new Map(), calls=[], drawings=[], timers=new Map();
+  let stopped=false, pendingCamera;
+  const context2d={clearRect(){drawings.length=0;},drawImage(){},strokeRect(...args){drawings.push(args);},fillText(){}};
+  function element(id){
+    if(!elements.has(id)) elements.set(id,{hidden:true,disabled:false,textContent:'',width:640,height:480,
+      videoWidth:640,videoHeight:480,handlers:{},classList:{add(){},remove(){}},
+      addEventListener(type,fn){this.handlers[type]=fn;},getContext(){return context2d;},
+      pause(){},async play(){},toBlob(fn){fn(new Blob(['jpeg'],{type:'image/jpeg'}));}});
     return elements.get(id);
-  };
-  const storage = new Map([['dg_camera_source','model']]), calls = [];
-  const jpeg = new Uint8Array([255,216,1,2,255,217]);
-  const header = new TextEncoder().encode(`--frame\r\nContent-Type: image/jpeg\r\nContent-Length: ${jpeg.length}\r\n\r\n`);
-  const packet = new Uint8Array(header.length + jpeg.length + 2);
-  packet.set(header); packet.set(jpeg, header.length); packet.set([13,10], packet.length-2);
-  let reads = 0, sawLive = false;
-  const reader = {async read(){
-    reads++;
-    if(reads === 1) return {value:packet.slice(0,10),done:false};
-    if(reads === 2) return {value:packet.slice(10),done:false};
-    sawLive = element('cameraBadge').textContent === 'AI LIVE';
-    return {done:true};
-  }, async cancel(){}, releaseLock(){}};
-  const context = vm.createContext({document:{getElementById:element},
-    window:{addEventListener(){}}, location:{protocol, search:'?site=chunjeon'},
-    localStorage:{getItem:k=>storage.get(k),setItem:(k,v)=>storage.set(k,v)},
-    dgGetSession:()=>({id:'operator'}),updateSimControls(){},pauseSim(){},
-    URL,URLSearchParams,AbortController,TextDecoder,Uint8Array,Blob,setTimeout,clearTimeout,
-    fetch:async(url, options)=>{calls.push({url,options});return {ok:true,
-      headers:new Headers({'content-type':'multipart/x-mixed-replace; boundary=frame'}),body:{getReader:()=>reader}};}
-  });
-  vm.runInContext(readFileSync('code/js/camera.js','utf8'), context);
-  element('cameraServer').value = address;
-  element('cameraPassword').value = 'private-stream-key';
-  await element('cameraForm').handlers.submit({preventDefault(){}});
-  return {elements,storage,calls,sawLive};
+  }
+  const track={stop(){stopped=true;},onended:null};
+  const stream={getTracks:()=>[track],getVideoTracks:()=>[track]};
+  const context=vm.createContext({document:{getElementById:element,createElement:()=>element('capture')},
+    window:{addEventListener(){}},navigator:{mediaDevices:{getUserMedia:()=>deferredCamera?new Promise(resolve=>{pendingCamera=resolve;}):Promise.resolve(stream)}},
+    updateSimControls(){},pauseSim(){},dgGetSession:()=>({id:'operator'}),
+    dgApi:async(path,options)=>{calls.push({path,options});if(error)throw new Error(error);return result;},
+    AbortController,FormData,Blob,Number,Math,
+    setTimeout(fn,delay){const id=timers.size+1;timers.set(id,{fn,delay});return id;},clearTimeout(id){timers.delete(id);}});
+  vm.runInContext(readFileSync('code/js/camera.js','utf8'),context);
+  const start=element('cameraForm').handlers.submit({preventDefault(){}});
+  if(deferredCamera){element('cameraDisconnectBtn').handlers.click();pendingCamera(stream);}
+  await start;
+  for(let i=0;i<10;i++)await Promise.resolve();
+  return {elements,calls,drawings,timers,track,stopped:()=>stopped,disconnect:()=>element('cameraDisconnectBtn').handlers.click()};
 }
-
-const model = await scenario('https:', 'https://camera.test');
-assert.equal(model.calls.length, 1);
-assert.equal(model.calls[0].url, 'https://camera.test/stream');
-assert.equal(model.calls[0].options.headers.Authorization, 'Bearer private-stream-key');
-assert.equal(model.elements.get('cameraPassword').value, '');
-assert.ok(![...model.storage.values()].join('').includes('private-stream-key'));
-assert.ok(model.sawLive, 'Split MJPEG packets render the AI video');
-assert.match(model.elements.get('cameraStatus').textContent, /종료/);
-assert.equal(model.elements.get('cameraFeed').hidden, true);
-const mixed = await scenario('https:', 'http://camera.test');
-assert.equal(mixed.calls.length, 0);
-assert.match(mixed.elements.get('cameraStatus').textContent, /HTTPS/);
-console.log('AI video connection, split frames, disconnect, and HTTPS checks passed');
+const live=await scenario({result:{image_size:[640,480],detections:[{bbox:[10,20,110,120],water_state:'DROWNING',confidence:0.8}]}});
+assert.equal(live.calls[0].path,'/camera/analyze');
+assert.ok(live.calls[0].options.body.get('image') instanceof Blob);
+assert.equal(live.elements.get('cameraBadge').textContent,'AI LIVE');
+assert.deepEqual(live.drawings[0],[10,20,100,100]);
+assert.equal(live.calls.length,1,'Only one inference request runs at a time');
+live.disconnect();assert.ok(live.stopped());assert.equal(live.elements.get('cameraOverlay').hidden,true);assert.equal(live.timers.size,0);
+const empty=await scenario({result:{image_size:[640,480],detections:[]}});
+assert.match(empty.elements.get('cameraStatus').textContent,/대상 없음/);empty.disconnect();
+const failed=await scenario({error:'upstream unavailable'});
+assert.match(failed.elements.get('cameraStatus').textContent,/upstream unavailable/);
+assert.equal(failed.elements.get('cameraBadge').textContent,'AI 연결 대기');failed.disconnect();
+const canceled=await scenario({deferredCamera:true});
+assert.ok(canceled.stopped());assert.equal(canceled.calls.length,0,'Canceled camera permission must not start inference');
+console.log('Camera inference, boxes, empty results, errors, disconnect, and permission cancellation passed');
