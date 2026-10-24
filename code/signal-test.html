@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>신호 수신 테스트 · Drown Guardian</title>
+  <link rel="stylesheet" href="css/common.css">
+  <style>
+    body{padding:24px;max-width:700px;margin:auto}section{border:1px solid #69758b;border-radius:12px;padding:20px;margin:20px 0}input,button{font:inherit;padding:12px;margin:6px 0;max-width:100%;box-sizing:border-box}input{display:block;width:100%}button{cursor:pointer}li{padding:12px 0;overflow-wrap:anywhere}#status{font-weight:bold}label{display:block}#notice{min-height:2em;color:#e89b32}
+  </style>
+</head>
+<body>
+  <h1>신호 수신 테스트</h1>
+  <p>브릿지 또는 다른 기기에서 보낸 테스트 신호를 확인합니다. 실제 구조 출동과는 연결되지 않습니다.</p>
+  <p>휴대폰에서 이 화면을 계속 열어 두세요. 약 1초 간격으로 확인하며, 화면 잠금·백그라운드 상태의 푸시는 지원하지 않습니다.</p>
+  <section id="loginPanel">
+    <h2>운영자 / 관리자 로그인</h2>
+    <form id="loginForm">
+      <label>아이디<input id="username" autocomplete="username" required></label>
+      <label>비밀번호<input id="password" type="password" autocomplete="current-password" required></label>
+      <button>로그인하고 수신 시작</button>
+    </form>
+  </section>
+  <section id="receiver" hidden>
+    <p id="status" role="status">연결 중</p>
+    <button id="sound" type="button">알림 소리 켜기</button>
+    <button id="logout" type="button">로그아웃</button>
+    <h2>임의 신호 보내기</h2>
+    <form id="sendForm">
+      <label>메시지<input id="message" maxlength="500" value="익수 감지 임의 패킷 테스트" required></label>
+      <button id="send">테스트 신호 전송</button>
+    </form>
+    <p>전송 성공은 서버 저장 완료를 뜻합니다. 휴대폰의 아래 수신 기록에 같은 번호가 표시되는지 확인하세요.</p>
+    <h2>이 화면에서 받은 신호 <span id="count">0</span>건</h2>
+    <ol id="signals" aria-live="polite"></ol>
+  </section>
+  <p id="notice" role="alert"></p>
+  <script src="js/auth.js"></script>
+  <script src="js/signal-test.js"></script>
+</body>
+</html>
