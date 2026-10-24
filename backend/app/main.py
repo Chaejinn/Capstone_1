@@ -10,6 +10,7 @@ from backend.platform import config as platform_config, main as platform
 from backend.platform.routers import auth, users, sites, settings, contacts, audit
 from backend.platform.routers import camera, events as platform_events, ai_bridge as platform_ai, ws as platform_ws
 from backend.platform.routers import camera_analysis
+from backend.platform.routers import test_signals
 from .database import Base, SessionLocal, engine
 from .routers import ai_bridge, boat, calibration, config_router, events, judgement, mission, status, ws
 from .services import config_service
@@ -43,7 +44,8 @@ app = FastAPI(title="Drown Guardian 통합 서버", version="1.1.0", lifespan=li
               docs_url="/api/docs", openapi_url="/api/openapi.json")
 
 for router in (auth.router, users.router, sites.router, settings.router, contacts.router,
-               audit.router, platform_events.router, platform_ai.router, boat.router, camera_analysis.router):
+               audit.router, platform_events.router, platform_ai.router, boat.router, camera_analysis.router,
+               test_signals.router):
     app.include_router(router, prefix="/api")
 app.add_api_route("/api/maintenance/reset", platform.reset, methods=["POST"], tags=["maintenance"])
 if platform_config.CAMERA_ENABLED:
