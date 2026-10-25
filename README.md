@@ -47,6 +47,21 @@ drown-guardian-platform/
 
 ## 참고
 
+### GitHub 자동 반영
+
+VS Code에서 이 폴더를 열면 `scripts/auto-git-sync.sh`가 변경을 감시하고
+약 5~10초 후 커밋하여 아래 두 저장소의 `main`에 각각 푸시합니다.
+
+- `origin`: https://github.com/Chaejinn/Capstone_1.git
+- `drownguardian`: https://github.com/DrownGuardian/Web-Platform.git
+
+새로 복제한 환경에서는 `git remote -v`를 확인하고, 없는 원격을 위 이름과 URL로
+`git remote add <이름> <URL>`로 등록하세요. 두 저장소의 쓰기 권한이 필요합니다.
+한쪽 푸시가 실패해도 다른 쪽은 처리하며, 실패한 쪽은 다음 주기에 재시도합니다.
+원격의 다른 변경을 자동으로 pull하거나 강제 푸시하지 않으므로 이력이 갈라지면 수동 병합이 필요합니다.
+병합·리베이스 중이거나 `main` 이외의 브랜치에서는 자동 반영을 멈춥니다.
+VS Code 작업을 종료하면 감시도 종료됩니다.
+
 - 본 프로젝트는 SRS의 FR/NFR 요구사항 ID를 UI 곳곳에 태그로 표기하여
   문서와 화면을 상호 대조할 수 있게 했습니다.
 - 로그인·권한 분리는 프론트엔드 시연용이며, 실제 서비스에서는 반드시
