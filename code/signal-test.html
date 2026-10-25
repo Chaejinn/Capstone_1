@@ -24,9 +24,26 @@
     <p id="status" role="status">연결 중</p>
     <button id="sound" type="button">알림 소리 켜기</button>
     <button id="logout" type="button">로그아웃</button>
-    <h2>임의 신호 보내기</h2>
-    <button id="dispatch" type="button">임의 출동명령 전송</button>
-    <p>출동명령 테스트 신호를 보냅니다. 실제 보트는 구동하지 않습니다. 아래 메시지를 출동명령에 함께 담습니다.</p>
+    <h2>하드웨어 없이 제어 테스트</h2>
+    <p>VLM·카메라·브릿지 없이 명령을 생성하고 서버의 모의 상태와 휴대폰 수신을 확인합니다. 실제 보트 구동과는 별개입니다.</p>
+    <label>목표 X (m)<input id="targetX" type="number" step="any" value="5" required></label>
+    <label>목표 Y (m)<input id="targetY" type="number" step="any" value="0" required></label>
+    <div>
+      <button data-command="DISPATCH" type="button">임의 출동명령 전송</button>
+      <button data-command="ESTOP" type="button">비상정지</button>
+      <button data-command="CLEAR_ESTOP" type="button">비상정지 해제</button>
+      <button data-command="CANCEL" type="button">출동 취소</button>
+      <button data-command="RETURN" type="button">복귀</button>
+      <button data-command="DEPLOY" type="button">구조망 전개</button>
+      <button data-command="COMPLETE" type="button">구조 완료</button>
+      <button data-command="RESET" type="button">테스트 초기화</button>
+    </div>
+    <p>비상정지는 해제 또는 초기화 전까지 유지됩니다. 해제해도 자동 재출동하지 않습니다. 초기화는 모의 상태만 초기화하며 기록은 보존합니다.</p>
+    <h3>서버 모의 상태</h3>
+    <pre id="controlState" aria-live="polite" style="white-space:pre-wrap;overflow-wrap:anywhere">연결 중</pre>
+    <h3>이 화면에서 마지막으로 받은 제어 패킷</h3>
+    <pre id="controlPacket" style="white-space:pre-wrap;overflow-wrap:anywhere">수신 대기 중</pre>
+    <h2>임의 메시지 보내기</h2>
     <form id="sendForm">
       <label>메시지<input id="message" maxlength="500" value="익수 감지 임의 패킷 테스트" required></label>
       <button id="send">테스트 신호 전송</button>

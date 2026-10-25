@@ -1,6 +1,7 @@
 /* Foreground polling deliberately works without WebSocket hosting or push services. */
 (() => {
   const el = id => document.getElementById(id);
+  let controlCursor = 0;
   let cursor = 0, timer, running = false, generation = 0, count = 0, audio;
   const notify = message => { el('notice').textContent = message; };
   function beep() {
@@ -25,6 +26,13 @@
       cursor = data.cursor;
       el('count').textContent = count;
       if (data.signals.length) beep();
+      const control = await dgApi(`/test-control?after_id=${controlCursor}`);
+      if (!running || version !== generation) return;
+      controlCursor = control.cursor;
+      el('controlState').textContent = JSON.stringify(control.state, null, 2);
+      if (control.packets.length) {
+        el('controlPacket').textContent = JSON.stringify(control.packets[control.packets.length - 1], null, 2);
+      }
       el('status').textContent = `수신 대기 중 · 마지막 확인 ${new Date().toLocaleTimeString('ko-KR')}`;
     } catch (error) {
       if (version !== generation) return;
@@ -39,6 +47,10 @@
   }
   async function start() {
     const data = await dgApi('/test-signals?latest=true');
+    const control = await dgApi('/test-control?latest=true');
+    controlCursor = control.cursor;
+    el('controlState').textContent = JSON.stringify(control.state, null, 2);
+    el('controlPacket').textContent = '수신 대기 중';
     cursor = data.cursor; running = true;
     el('signals').replaceChildren(); count = 0; el('count').textContent = '0';
     el('loginPanel').hidden = true; el('receiver').hidden = false;
@@ -60,21 +72,21 @@
     } catch (error) { notify(error.message); }
     finally { el('send').disabled = false; }
   });
-  el('dispatch').addEventListener('click', async () => {
-    const message = el('message').value.trim() || '지정 위치로 출동 요청';
-    const dispatchMessage = `[출동명령 테스트] ${message}`;
-    if (dispatchMessage.length > 500) {
-      notify('출동명령 메시지는 489자 이하로 입력하세요.');
-      return;
-    }
-    el('dispatch').disabled = true;
-    try {
-      const signal = await dgApi('/test-signals', {
-        method: 'POST', body: {source: 'dispatch-test', message: dispatchMessage}
-      });
-      notify(`#${signal.id} 출동명령 테스트 저장 완료. 휴대폰에서 같은 번호의 수신 기록과 알림음을 확인하세요.`);
-    } catch (error) { notify(error.message); }
-    finally { el('dispatch').disabled = false; }
+  document.querySelectorAll('[data-command]').forEach(button => {
+    button.addEventListener('click', async () => {
+      const body = {command: button.dataset.command};
+      if (body.command === 'DISPATCH') {
+        if (!el('targetX').reportValidity() || !el('targetY').reportValidity()) return;
+        body.target_x = Number(el('targetX').value);
+        body.target_y = Number(el('targetY').value);
+      }
+      button.disabled = true;
+      try {
+        const packet = await dgApi('/test-control', {method: 'POST', body});
+        notify(`#${packet.id} ${packet.command} 저장 완료. 휴대폰의 수신 기록을 확인하세요.`);
+      } catch (error) { notify(error.message); }
+      finally { button.disabled = false; }
+    });
   });
   el('sound').addEventListener('click', async () => {
     try {
