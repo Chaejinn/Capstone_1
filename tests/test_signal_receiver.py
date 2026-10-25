@@ -10,6 +10,7 @@ from sqlalchemy.pool import StaticPool
 from backend.platform.database import Base, get_db
 from backend.platform.deps import require_operator_or_admin
 from backend.platform.routers.test_signals import router
+from backend.platform.routers.test_control import router as control_router
 
 
 class SignalReceiverTests(unittest.TestCase):
@@ -19,6 +20,7 @@ class SignalReceiverTests(unittest.TestCase):
         sessions = sessionmaker(bind=self.engine)
         self.app = FastAPI()
         self.app.include_router(router, prefix='/api')
+        self.app.include_router(control_router, prefix='/api')
         def db():
             with sessions() as session:
                 yield session
@@ -49,6 +51,39 @@ class SignalReceiverTests(unittest.TestCase):
         cursor = received['cursor']
         self.assertEqual(self.client.get(f'/api/test-signals?after_id={cursor}').json()['signals'], [])
         self.assertEqual(self.client.get('/api/test-signals?latest=true').json()['cursor'], cursor)
+
+    def test_simulated_control_sequence_and_phone_receipt(self):
+        from backend.app.routers.boat import boat_control
+        before = boat_control.read()
+        self.authorize()
+        self.assertEqual(self.client.get('/api/test-control?latest=true').json()['cursor'], 0)
+        for command, expected in [('DISPATCH', 'DISPATCHED'), ('ESTOP', 'STOPPED')]:
+            response = self.client.post('/api/test-control', json={'command': command, 'target_x': 12, 'target_y': 3})
+            self.assertEqual(response.status_code, 201)
+            self.assertEqual(response.json()['state']['status'], expected)
+        for command in ['DISPATCH', 'RETURN', 'DEPLOY', 'COMPLETE', 'CANCEL']:
+            self.assertEqual(self.client.post('/api/test-control', json={'command': command}).status_code, 409)
+        cleared = self.client.post('/api/test-control', json={'command': 'CLEAR_ESTOP'}).json()
+        self.assertEqual(cleared['state'], {'status': 'IDLE', 'estop': False, 'target': None})
+        for command, status in [('DISPATCH', 'DISPATCHED'), ('CANCEL', 'CANCELLED'),
+                                ('DISPATCH', 'DISPATCHED'), ('DEPLOY', 'DEPLOYING'),
+                                ('RETURN', 'RETURNING'), ('COMPLETE', 'COMPLETED'), ('RESET', 'IDLE')]:
+            self.assertEqual(self.client.post('/api/test-control', json={'command': command}).json()['state']['status'], status)
+        received = self.client.get('/api/test-control').json()
+        self.assertEqual(len(received['packets']), 10)
+        self.assertEqual(received['packets'][0]['state']['target'], {'x': 12, 'y': 3})
+        self.assertEqual(received['packets'][0]['command'], 'DISPATCH')
+        self.assertEqual(self.client.get(f"/api/test-control?after_id={received['cursor']}").json()['packets'], [])
+        self.assertEqual(len(self.client.get('/api/test-signals').json()['signals']), 10)
+        self.assertEqual(boat_control.read(), before)
+
+    def test_control_auth_and_validation(self):
+        self.assertEqual(self.client.post('/api/test-control', json={'command': 'ESTOP'}).status_code, 401)
+        self.assertEqual(self.client.get('/api/test-control').status_code, 401)
+        self.authorize()
+        for body in [{'command': 'UNKNOWN'}, {'command': 'DISPATCH', 'target_x': 'nan'},
+                     {'command': 'ESTOP', 'unexpected': True}]:
+            self.assertEqual(self.client.post('/api/test-control', json=body).status_code, 422)
 
     def test_validation_and_ordered_backlog(self):
         self.authorize()
