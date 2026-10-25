@@ -10,7 +10,7 @@ from backend.platform import config as platform_config, main as platform
 from backend.platform.routers import auth, users, sites, settings, contacts, audit
 from backend.platform.routers import camera, events as platform_events, ai_bridge as platform_ai, ws as platform_ws
 from backend.platform.routers import camera_analysis
-from backend.platform.routers import test_signals, test_control
+from backend.platform.routers import test_signals, test_control, test_push
 from .database import Base, SessionLocal, engine
 from .routers import ai_bridge, boat, calibration, config_router, events, judgement, mission, status, ws
 from .services import config_service
@@ -26,6 +26,8 @@ async def lifespan(application):
         try:
             yield
         finally:
+            from backend.platform.test_automation import automation
+            await automation.stop()
             if not platform_config.IS_VERCEL:
                 from .dispatch.guidance_controller import guidance_controller
                 from .dispatch.dispatch_manager import dispatch_manager
@@ -45,7 +47,7 @@ app = FastAPI(title="Drown Guardian 통합 서버", version="1.1.0", lifespan=li
 
 for router in (auth.router, users.router, sites.router, settings.router, contacts.router,
                audit.router, platform_events.router, platform_ai.router, boat.router, camera_analysis.router,
-               test_signals.router, test_control.router):
+               test_signals.router, test_control.router, test_push.router):
     app.include_router(router, prefix="/api")
 app.add_api_route("/api/maintenance/reset", platform.reset, methods=["POST"], tags=["maintenance"])
 if platform_config.CAMERA_ENABLED:

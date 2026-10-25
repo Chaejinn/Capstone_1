@@ -3,7 +3,7 @@ import json
 from threading import Lock
 from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import Column, Integer, Text
 from sqlalchemy.orm import Session
@@ -48,7 +48,6 @@ def receive(after_id: int = Query(0, ge=0), latest: bool = False, db: Session = 
                 cursor=rows[-1].id if rows else after_id, state=current(db))
 
 
-@router.post('', status_code=201)
 def send(body: CommandInput, db: Session = Depends(get_db)):
     # This simulator runs on a single local server process.
     with lock:
@@ -81,3 +80,29 @@ def send(body: CommandInput, db: Session = Depends(get_db)):
         record.packet = json.dumps(packet, ensure_ascii=False)
         db.commit()
         return packet
+
+
+@router.post('', status_code=201)
+def send_and_notify(body: CommandInput, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    from .test_push import deliver
+    packet = send(body, db)
+    background_tasks.add_task(deliver, packet)
+    return packet
+
+
+@router.get('/auto')
+async def auto_status():
+    from ..test_automation import automation
+    return automation.status()
+
+
+@router.post('/auto/start')
+async def auto_start():
+    from ..test_automation import automation
+    return automation.start()
+
+
+@router.post('/auto/stop')
+async def auto_stop():
+    from ..test_automation import automation
+    return await automation.stop()
