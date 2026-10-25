@@ -10,3 +10,4 @@ public/
 .vercel
 .env*
 local-model/
+/.local-signal-test/

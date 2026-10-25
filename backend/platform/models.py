@@ -18,16 +18,6 @@ def now_utc():
     return datetime.datetime.utcnow()
 
 
-class TestSignal(Base):
-    """Bridge integration test packets; separate from real rescue events."""
-    __tablename__ = "test_signals"
-
-    id = Column(Integer, primary_key=True)
-    source = Column(String(80), nullable=False)
-    message = Column(String(500), nullable=False)
-    created_at = Column(DateTime, default=now_utc, nullable=False)
-
-
 class User(Base):
     """운영자/관리자 계정. FR-SEC-004(제안) — 관제 대시보드 인증·권한 분리."""
     __tablename__ = "users"

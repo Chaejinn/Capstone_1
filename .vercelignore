@@ -9,5 +9,6 @@ code.zip
 backend/*.db
 backend/tests
 tests
+.local-signal-test
 **/__pycache__
 .env*
