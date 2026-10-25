@@ -40,6 +40,22 @@ class UnifiedServerTests(unittest.TestCase):
             item.stop()
         self.engine.dispose()
 
+    def test_automatic_signal_routes_and_push_assets(self):
+        self.assertEqual(self.client.post('/api/test-control/auto/start').status_code, 401)
+        with patch('backend.platform.test_automation.SessionLocal', self.sessions), \
+             patch('backend.platform.test_automation.test_push.deliver'):
+            started = self.client.post('/api/test-control/auto/start', headers=self.headers)
+            self.assertEqual(started.status_code, 200)
+            self.assertTrue(started.json()['running'])
+            self.assertTrue(self.client.get('/api/test-control/auto', headers=self.headers).json()['running'])
+            stopped = self.client.post('/api/test-control/auto/stop', headers=self.headers)
+            self.assertFalse(stopped.json()['running'])
+        for path in ['/signal-sw.js', '/signal-test.webmanifest']:
+            self.assertEqual(self.client.get(path).status_code, 200)
+        config_response = self.client.get('/api/test-push', headers=self.headers)
+        self.assertEqual(config_response.status_code, 200)
+        self.assertIn('available', config_response.json())
+
     def test_shared_database_and_routes(self):
         self.assertIs(Base, PlatformBase)
         for path in ['/api/auth/me', '/api/sites', '/api/status', '/api/config/judge',
