@@ -62,6 +62,17 @@ class SignalReceiverTests(unittest.TestCase):
         rest = self.client.get(f"/api/test-signals?after_id={first['cursor']}").json()
         self.assertEqual([s['id'] for s in rest['signals']], [101, 102])
 
+    def test_dispatch_test_signal_reaches_receiver(self):
+        self.authorize()
+        body = {'source': 'dispatch-test', 'message': '[출동명령 테스트] 지정 위치로 출동 요청'}
+        sent = self.client.post('/api/test-signals', json=body)
+        self.assertEqual(sent.status_code, 201)
+        signals = self.client.get('/api/test-signals?after_id=0').json()['signals']
+        self.assertEqual(signals, [sent.json()])
+        self.assertEqual(signals[0]['source'], body['source'])
+        self.assertEqual(signals[0]['message'], body['message'])
+        self.assertTrue(signals[0]['test'])
+
 
 if __name__ == '__main__':
     unittest.main()

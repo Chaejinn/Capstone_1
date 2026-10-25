@@ -60,6 +60,22 @@
     } catch (error) { notify(error.message); }
     finally { el('send').disabled = false; }
   });
+  el('dispatch').addEventListener('click', async () => {
+    const message = el('message').value.trim() || '지정 위치로 출동 요청';
+    const dispatchMessage = `[출동명령 테스트] ${message}`;
+    if (dispatchMessage.length > 500) {
+      notify('출동명령 메시지는 489자 이하로 입력하세요.');
+      return;
+    }
+    el('dispatch').disabled = true;
+    try {
+      const signal = await dgApi('/test-signals', {
+        method: 'POST', body: {source: 'dispatch-test', message: dispatchMessage}
+      });
+      notify(`#${signal.id} 출동명령 테스트 저장 완료. 휴대폰에서 같은 번호의 수신 기록과 알림음을 확인하세요.`);
+    } catch (error) { notify(error.message); }
+    finally { el('dispatch').disabled = false; }
+  });
   el('sound').addEventListener('click', async () => {
     try {
       audio ||= new (window.AudioContext || window.webkitAudioContext)();
