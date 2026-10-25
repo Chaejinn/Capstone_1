@@ -11,3 +11,4 @@ public/
 .env*
 local-model/
 /.local-signal-test/
+/SIGNAL_TEST.md

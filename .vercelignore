@@ -12,3 +12,4 @@ tests
 .local-signal-test
 **/__pycache__
 .env*
+SIGNAL_TEST.md
