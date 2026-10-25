@@ -1,5 +1,6 @@
 """Bridge HTTP -> durable packet -> phone polling contract, isolated from hardware."""
 import unittest
+from unittest.mock import patch
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -15,6 +16,8 @@ from backend.platform.routers.test_control import router as control_router
 
 class SignalReceiverTests(unittest.TestCase):
     def setUp(self):
+        self.push_mock = patch('backend.platform.routers.test_push.deliver').start()
+        self.addCleanup(patch.stopall)
         self.engine = create_engine('sqlite://', connect_args={'check_same_thread': False}, poolclass=StaticPool)
         Base.metadata.create_all(self.engine)
         sessions = sessionmaker(bind=self.engine)
