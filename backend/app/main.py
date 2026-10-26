@@ -77,4 +77,4 @@ if not platform_config.IS_VERCEL:
             response.headers['Cache-Control'] = 'no-store, max-age=0'
         return response
 
-    app.mount("/", StaticFiles(directory=Path(__file__).resolve().parents[2] / "code"), name="frontend")
+app.mount("/", StaticFiles(directory=Path(__file__).resolve().parents[2] / "code"), name="frontend")
