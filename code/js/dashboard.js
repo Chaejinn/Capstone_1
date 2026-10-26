@@ -402,7 +402,7 @@ function tick(){
     renderBoard();
     if(state.distance<=2){
       state.phase='DEPLOYING'; state.stepIndex=2;
-      pushLog('초음파 임계 거리 도달 · 추진 정지 · 하부 진입 정렬 시작','info');
+      pushLog('임계 거리 도달','info');
     }
   }
   else if(state.phase==='DEPLOYING'){
