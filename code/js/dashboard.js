@@ -86,6 +86,7 @@ document.getElementById('threshConfLbl').textContent = state.threshConf.toFixed(
 document.getElementById('threshFrLbl').textContent = state.threshFrames+' 프레임';
 
 let simTimer=null, screeningTicks=0, cancelTimer=null;
+let cancelDeadline=0;
 
 /* ---------------- LOGGING ---------------- */
 // meta가 있으면(판정 이벤트) 타임라인에서 클릭 시 근거 스냅샷 상세를 볼 수 있다. (FR-MON-004, screenflow S4 자기루프)
@@ -282,6 +283,7 @@ function playAlarmBeep(){
 /* ---------------- 출동 취소 (EX-12, SD-02 opt 블록) ---------------- */
 function startCancelWindow(){
   let remain = 3;
+  cancelDeadline = Date.now() + 3000;
   const btn = document.getElementById('cancelDispatchBtn');
   const label = document.getElementById('cancelCountdown');
   btn.style.display='inline-block'; btn.disabled=false;
@@ -289,11 +291,12 @@ function startCancelWindow(){
   state.cancellable = true;
   clearInterval(cancelTimer);
   cancelTimer = setInterval(()=>{
-    remain--;
+    remain = Math.max(0, Math.ceil((cancelDeadline - Date.now()) / 1000));
     if(remain<=0){
       clearInterval(cancelTimer);
       state.cancellable = false;
       btn.disabled = true;
+      btn.style.display = 'none';
       label.textContent = 0;
     } else {
       label.textContent = remain;
@@ -301,7 +304,7 @@ function startCancelWindow(){
   }, 1000);
 }
 function cancelDispatch(){
-  if(!state.cancellable || state.estop) return;
+  if(!state.cancellable || state.estop || Date.now() >= cancelDeadline) return;
   clearInterval(cancelTimer);
   state.cancellable = false;
   document.getElementById('cancelDispatchBtn').style.display='none';
@@ -385,11 +388,11 @@ function tick(){
       // SD-02: 화면 2(관제) 자동 전환 + 경보음 — 관리자가 설정/이벤트/상태 화면에 있어도 강제 전환
       switchView('control');
       playAlarmBeep();
-      startCancelWindow();
 
       const eventId = 'EVT-' + Date.now().toString(36).toUpperCase();
       state.currentEventMeta = {id: eventId, verdict:'DROWNING', confidence: state.confidence, status:'DISPATCHED'};
       pushLog(`⚠ 익수 판정 — ID 02 · 신뢰도 ${(state.confidence*100).toFixed(0)}% · 출동 명령 발행 (3초 이내 취소 가능)`,'crit', state.currentEventMeta);
+      startCancelWindow();
       dgAudit(`익수 판정 이벤트 발생 · 신뢰도 ${(state.confidence*100).toFixed(0)}%`);
       state.phase='APPROACHING'; state.stepIndex=1;
     }

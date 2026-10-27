@@ -71,7 +71,6 @@
             <div id="alertBanner" class="alert-banner" style="display:none;">
               <span id="alertText">⚠ 익수 감지 — ID 02</span>
               <span id="alertConf" class="mono">신뢰도 0%</span>
-              <button id="cancelDispatchBtn" class="cancel-dispatch-btn mono" style="display:none;" onclick="cancelDispatch()">출동 취소 (오탐) · <span id="cancelCountdown">3</span>s</button>
             </div>
             <svg id="roiSvgControl" viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute; inset:0; width:100%; height:100%; z-index:2; pointer-events:none;">
               <polygon id="roiPolyControl" points="" fill="rgba(141,160,188,0.05)" stroke="rgba(141,160,188,0.5)" stroke-width="0.4" stroke-dasharray="2,1.5"/>
@@ -107,6 +106,7 @@
           <div class="sim-controls">
             <button class="btn primary" id="startBtn" onclick="startSim()">▶ 시뮬레이션 시작</button>
             <button class="btn" id="simEstopBtn" onclick="triggerEstop()">비상정지</button>
+            <button class="btn mono" id="cancelDispatchBtn" style="display:none;" onclick="cancelDispatch()">출동 취소 · <span id="cancelCountdown">3</span>초</button>
             <button class="btn" onclick="resetSim()">↺ 리셋</button>
           </div>
         </div>
