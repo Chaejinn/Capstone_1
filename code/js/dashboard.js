@@ -324,7 +324,7 @@ function updateSimControls(){
   const startBtn = document.getElementById('startBtn');
   startBtn.textContent = state.paused ? '▶ 재개' : '▶ 시뮬레이션 시작';
   startBtn.disabled = window.dgCameraLive || state.estop || state.running || state.phase==='COMPLETE';
-  document.getElementById('pauseBtn').disabled = state.estop || !state.running;
+  document.getElementById('simEstopBtn').disabled = state.estop;
 }
 function startSim(){
   if(window.dgCameraLive || state.estop || state.running || state.phase==='COMPLETE') return;
