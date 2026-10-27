@@ -20,9 +20,9 @@ from .routers import ai_bridge, camera, audit, auth, contacts, events, settings,
 
 SEED_SITES = [
     {"id": "chunjeon", "name": "금오천 일대", "meta": "CAM-01 · BOARD-01 · 실내 수조 실증", "status": "운영중", "enabled": True},
-    {"id": "river-b", "name": "낙동강 체육공원", "meta": "다중 노드 확장 · 범위 외 (후속 과제)", "status": "준비중", "enabled": False},
-    {"id": "farm-c", "name": "금호강 낚시스팟", "meta": "확장 응용 · 범위 외 (후속 과제)", "status": "준비중", "enabled": False},
-    {"id": "port-d", "name": "선산대교 밑 낚시스팟", "meta": "확장 응용 · 범위 외 (후속 과제)", "status": "준비중", "enabled": False},
+    {"id": "river-b", "name": "낙동강 체육공원", "meta": "CAM-02 · BOARD-02", "status": "준비중", "enabled": False},
+    {"id": "farm-c", "name": "금호강 낚시스팟", "meta": "CAM-03 · BOARD-03", "status": "준비중", "enabled": False},
+    {"id": "port-d", "name": "선산대교 밑 낚시스팟", "meta": "CAM-04 · BOARD-04", "status": "준비중", "enabled": False},
 ]
 
 
@@ -41,8 +41,14 @@ def seed_db(bind=None):
             )
 
         for s in SEED_SITES:
-            if not db.query(models.Site).filter(models.Site.id == s["id"]).first():
+            site = db.query(models.Site).filter(models.Site.id == s["id"]).first()
+            if not site:
                 db.add(models.Site(**s))
+            elif site.meta in (
+                "다중 노드 확장 · 범위 외 (후속 과제)",
+                "확장 응용 · 범위 외 (후속 과제)",
+            ):
+                site.meta = s["meta"]
 
         if not db.query(models.GlobalSettings).filter(models.GlobalSettings.id == 1).first():
             db.add(
