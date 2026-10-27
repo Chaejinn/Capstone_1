@@ -19,7 +19,7 @@ from .camera import camera as camera_device
 from .routers import ai_bridge, camera, audit, auth, contacts, events, settings, sites, users, ws
 
 SEED_SITES = [
-    {"id": "chunjeon", "name": "금오천 일대", "meta": "CAM-01 · BOARD-01 · 실내 수조 실증", "status": "운영중", "enabled": True},
+    {"id": "chunjeon", "name": "금오천 일대", "meta": "CAM-01 · BOARD-01", "status": "운영중", "enabled": True},
     {"id": "river-b", "name": "낙동강 체육공원", "meta": "CAM-02 · BOARD-02", "status": "준비중", "enabled": False},
     {"id": "farm-c", "name": "금호강 낚시스팟", "meta": "CAM-03 · BOARD-03", "status": "준비중", "enabled": False},
     {"id": "port-d", "name": "선산대교 밑 낚시스팟", "meta": "CAM-04 · BOARD-04", "status": "준비중", "enabled": False},
@@ -45,6 +45,7 @@ def seed_db(bind=None):
             if not site:
                 db.add(models.Site(**s))
             elif site.meta in (
+                "CAM-01 · BOARD-01 · 실내 수조 실증",
                 "다중 노드 확장 · 범위 외 (후속 과제)",
                 "확장 응용 · 범위 외 (후속 과제)",
             ):
