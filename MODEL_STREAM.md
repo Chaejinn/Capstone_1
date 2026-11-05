@@ -1,5 +1,46 @@
 # 카메라 AI 분석 연결
 
+## Modal 배포 없이 로컬 실행
+
+`scripts/local_ai.py`는 웹과 모델의 실제 `/detect` API를 하나의 로컬 서버로
+실행합니다. RF-DETR는 CPU로 실행하므로 Mac에서도 CUDA가 필요하지 않습니다.
+학습된 Moondream 분류는 기존 모델 코드대로 클라우드 API를 사용하므로 인터넷과
+`MOONDREAM_API_KEY`가 필요합니다. 완전한 오프라인 추론은 아닙니다.
+
+AI 담당자에게 다음 세 파일과 Moondream 접근 키를 받으세요. ONNX와 manifest는
+같은 export 결과여야 합니다. 모델 코드는 `local-model/Detective-model`에 필요합니다.
+
+- `local-model/Detective-model/outputs/onnx-stage2/rfdetr_fp32.onnx`
+- `local-model/Detective-model/outputs/onnx-stage2/export_manifest.json`
+- `local-model/Detective-model/weights/moondream/model.json` (`model_id` 포함)
+
+Python 3.10 이상으로 저장소 루트에서 실행합니다. 기존 `.venv`가 3.9라면
+새 환경을 사용하세요. 키는 저장소나 채팅에 붙여넣지 않습니다.
+
+```sh
+python3 -m venv .venv-ai
+.venv-ai/bin/python -m pip install -r requirements-local-ai.txt
+read -s 'MOONDREAM_API_KEY?Moondream API key: '
+export MOONDREAM_API_KEY
+.venv-ai/bin/python scripts/local_ai.py --check
+.venv-ai/bin/python scripts/local_ai.py
+```
+
+위 비밀 입력 명령은 macOS 기본 zsh 기준입니다. Windows에서는 동일 키를 환경변수로
+설정하고 가상환경의 `Scripts/python.exe`로 실행합니다.
+`http://127.0.0.1:8000`에서 로그인 → 사이트 선택 → 관제 화면의
+**카메라 연결 · AI 분석**을 누르세요. 웹캠 프레임은 인증된
+`/api/camera/analyze` → 로컬 `/local-ai/detect`로 전달됩니다.
+웹과 모델 사이 인증 키는 실행마다 자동 생성하며 브라우저에 보내지 않습니다.
+실행 도구는 모델 저장소와 배포 설정을 수정하지 않습니다.
+다른 모델 경로는 `--model-dir /path/to/Detective-model`, 포트는 `--port 8001`로 지정합니다.
+이 실행 방식에서는 `DG_AI_URL`, `DG_AI_KEY`를 따로 설정할 필요가 없습니다.
+
+모델 파일·키가 없는 상태에서는 실행 전 누락 항목을 출력하고 종료합니다.
+실제 카메라 추론은 파일과 키를 준비한 뒤 확인해야 합니다.
+
+## 기존 Modal 연결
+
 현재 대시보드는 **카메라 연결 · AI 분석** 버튼 하나를 사용합니다.
 브라우저 웹캠 → 로그인 인증된 `/api/camera/analyze` → Modal `/detect` 순서로
 프레임을 전송하며, `bbox`와 `water_state`를 영상 위에 표시합니다.
