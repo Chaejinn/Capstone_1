@@ -47,7 +47,7 @@ export MOONDREAM_API_KEY
 `/v1/streams`와는 별도 경로이며, 현재 웹은 `/detect`로 이미지 한 장씩 분석합니다.
 학습 모델 파일을 웹 서버에 설치할 필요는 없습니다.
 
-1. [Vercel 환경변수 설정](https://vercel.com/chaejinns-projects/drown-guardian/settings/environment-variables)에서
+1. [Vercel 대시보드](https://vercel.com/dashboard)의 `drown-guardian` 프로젝트 환경변수 설정에서
    `DG_AI_KEY`를 추가합니다. 값은 담당자가 모델 서버에 등록한
    `DROWN_GUARDIAN_API_KEY`와 같아야 합니다. Production 환경을 선택하세요.
    프로젝트 화면이 열리지 않으면 Vercel 대시보드에서 `drown-guardian` 프로젝트의
