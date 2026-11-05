@@ -127,7 +127,7 @@
       video.hidden = false; overlay.hidden = false;
       el('videoPanel').classList.add('camera-connected');
       el('cameraBadge').textContent = 'AI 분석 대기';
-      el('cameraStatus').textContent = '카메라 연결됨 · 첫 AI 분석 중…';
+      el('cameraStatus').textContent = '카메라 연결됨';
       void analyze(run);
     }catch(error){
       if(run !== generation) return;
