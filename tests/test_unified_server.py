@@ -40,6 +40,23 @@ class UnifiedServerTests(unittest.TestCase):
             item.stop()
         self.engine.dispose()
 
+    def test_tracking_proxy_auth_site_scope_and_stream_validation(self):
+        from unittest.mock import AsyncMock
+        from backend.platform.routers import vision
+        base = '/api/vision/streams'
+        self.assertEqual(self.client.post(base + '?site_id=chunjeon').status_code, 401)
+        self.assertEqual(self.client.post(base + '?site_id=missing', headers=self.headers).status_code, 403)
+        stream = '01234567-89ab-4cde-8fab-0123456789ab'
+        with patch.object(vision, 'forward', new_callable=AsyncMock, return_value={'stream_id': stream}) as forward:
+            result = self.client.post(base + '?site_id=chunjeon', headers=self.headers)
+            self.assertEqual(result.status_code, 201)
+            self.assertEqual(result.json()['stream_id'], stream)
+            self.assertEqual(forward.call_args.args[2][1], 'chunjeon')
+            self.assertEqual(len(forward.call_args.args[2][0]), 64)
+            self.assertEqual(self.client.get(base + '/invalid/results?site_id=chunjeon', headers=self.headers).status_code, 422)
+            self.assertEqual(self.client.delete(base + '/' + stream + '?site_id=chunjeon', headers=self.headers).status_code, 200)
+            self.assertEqual(forward.call_args.args[1], 'DELETE')
+
     def test_automatic_signal_routes_and_push_assets(self):
         self.assertEqual(self.client.post('/api/test-control/auto/start').status_code, 401)
         with patch('backend.platform.test_automation.SessionLocal', self.sessions), \
