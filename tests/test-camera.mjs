@@ -46,7 +46,7 @@ assert.match(live.elements.get('aiResultInfo').textContent,/촬영.*초 전.*분
 assert.deepEqual(live.drawings[0],[10,20,100,100]);
 assert.equal(live.calls.length,3,'Create, upload and poll run sequentially');
 const refresh=[...live.timers.values()].find(t=>t.delay===1000);
-assert.ok(refresh);refresh.fn();
+assert.ok(refresh);for(const [id,t] of live.timers){if(t===refresh)live.timers.delete(id);}refresh.fn();
 for(let i=0;i<40;i++)await Promise.resolve();
 assert.equal(live.elements.get('localCameraFeed').hidden,false,'Live video stays visible during another inference');
 assert.equal(live.elements.get('cameraOverlay').hidden,false,'Last analyzed image stays visible while next analysis runs');
