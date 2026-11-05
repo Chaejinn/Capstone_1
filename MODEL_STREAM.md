@@ -41,6 +41,29 @@ export MOONDREAM_API_KEY
 
 ## 기존 Modal 연결
 
+### Vercel 웹에서 사용
+
+연결 대상은 배포된 **GPU 이미지 추론 API**입니다. 브라우저 수집 앱의
+`/v1/streams`와는 별도 경로이며, 현재 웹은 `/detect`로 이미지 한 장씩 분석합니다.
+학습 모델 파일을 웹 서버에 설치할 필요는 없습니다.
+
+1. [Vercel 환경변수 설정](https://vercel.com/chaejinns-projects/drown-guardian/settings/environment-variables)에서
+   `DG_AI_KEY`를 추가합니다. 값은 담당자가 모델 서버에 등록한
+   `DROWN_GUARDIAN_API_KEY`와 같아야 합니다. Production 환경을 선택하세요.
+   프로젝트 화면이 열리지 않으면 Vercel 대시보드에서 `drown-guardian` 프로젝트의
+   Settings → Environment Variables로 이동합니다.
+2. 기본 AI 주소는 `https://kbkr504--drown-guardian-api-fastapi-app.us-east.modal.run`입니다.
+   다른 서버를 사용할 때만 `DG_AI_URL`을 설정합니다. 경로 `/detect`는 붙이지 않습니다.
+3. 코드를 배포하고, 환경변수 변경 후에는 Production을 재배포합니다.
+   대기 시간 기본값은 45초이며 Vercel 함수 실행 시간은 60초로 설정합니다.
+4. 배포된 웹에서 운영자/관리자로 로그인하고 사이트를 선택한 뒤
+   **카메라 연결 · AI 분석**을 누르고 카메라 권한을 허용합니다.
+5. `AI LIVE`, 탐지 수, 분석 시간이 표시되면 해당 프레임의 응답을 받은 것입니다.
+   `UNCLEAR`는 분류 보류이며 익수 확정을 뜻하지 않습니다.
+
+AI 키는 Vercel 서버에만 설정합니다. HTML/JS, Git, 채팅에 넣지 않습니다.
+실제 장치에서 카메라 권한과 분석 응답을 확인해야 연결 검증이 완료됩니다.
+
 현재 대시보드는 **카메라 연결 · AI 분석** 버튼 하나를 사용합니다.
 브라우저 웹캠 → 로그인 인증된 `/api/camera/analyze` → Modal `/detect` 순서로
 프레임을 전송하며, `bbox`와 `water_state`를 영상 위에 표시합니다.
