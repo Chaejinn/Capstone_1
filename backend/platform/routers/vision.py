@@ -1,6 +1,8 @@
 """Authenticated, site-scoped proxy for persistent Modal tracking sessions."""
 import hashlib
 import os
+import re
+import time
 from uuid import UUID
 
 import httpx
@@ -14,11 +16,20 @@ from ..deps import require_operator_or_admin
 router = APIRouter(prefix='/vision', tags=['camera tracking'])
 
 
-def scope(site_id: str, user=Depends(require_operator_or_admin), db: Session = Depends(get_db)):
+def install_timing(app):
+    @app.middleware('http')
+    async def timing(request: Request, call_next):
+        if request.url.path.startswith('/api/vision/'):
+            request.state.vision_started = time.perf_counter()
+        return await call_next(request)
+
+
+def scope(site_id: str, request: Request, user=Depends(require_operator_or_admin), db: Session = Depends(get_db)):
     site = db.query(models.Site).filter(models.Site.id == site_id).first()
     if site is None or not site.enabled:
         raise HTTPException(403, '사용 가능한 사이트를 선택하세요.')
-    return hashlib.sha256(str(user.id).encode()).hexdigest(), site_id
+    elapsed = (time.perf_counter() - getattr(request.state, 'vision_started', time.perf_counter())) * 1000
+    return hashlib.sha256(str(user.id).encode()).hexdigest(), site_id, {'auth_site_ms': round(elapsed, 1)}
 
 
 async def forward(path, method, identity, body=None, content_type=None):
@@ -30,12 +41,28 @@ async def forward(path, method, identity, body=None, content_type=None):
     if content_type:
         headers['Content-Type'] = content_type
     try:
+        started = time.perf_counter()
         async with httpx.AsyncClient(timeout=25) as client:
             response = await client.request(method, url + path, headers=headers, content=body)
+        elapsed = (time.perf_counter() - started) * 1000
         if response.status_code >= 400:
+            message = '추적 서버 요청 실패 (HTTP %d)' % response.status_code
+            if response.status_code == 422:
+                detail = response.json().get('detail')
+                # Only allow known validation diagnostics, never arbitrary remote bodies.
+                if isinstance(detail, str):
+                    match = re.fullmatch(r'stale/future browser frame; observed_age_seconds=(-?\d+\.\d+); limit=(\d+); synchronize clocks', detail)
+                    if match:
+                        message = ('프레임 촬영 시각 검증 실패: 도착 시 나이 %ss, 허용 %ss; 인증·사이트 %.1fms, 추적 서버 왕복 %.1fms'
+                                   % (match[1], match[2], identity[2]['auth_site_ms'], elapsed))
+                    elif detail in ('Frame ID or image dimensions are invalid', 'frame_id must strictly increase within a stream', 'UTC timestamp required'):
+                        message += ': ' + detail
             raise HTTPException(response.status_code if response.status_code in (404, 413, 422, 429) else 502,
-                                '추적 서버 요청 실패 (HTTP %d)' % response.status_code)
-        return response.json()
+                                message)
+        data = response.json()
+        if isinstance(data, dict):
+            data['proxy_timing'] = {**identity[2], 'tracking_roundtrip_ms': round(elapsed, 1)}
+        return data
     except (httpx.HTTPError, ValueError):
         raise HTTPException(502, '추적 서버에 연결할 수 없습니다.') from None
 

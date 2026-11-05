@@ -52,6 +52,7 @@ for router in (auth.router, users.router, sites.router, settings.router, contact
     app.include_router(router, prefix="/api")
 app.add_api_route("/api/maintenance/reset", platform.reset, methods=["POST"], tags=["maintenance"])
 app.include_router(vision.router, prefix="/api")
+vision.install_timing(app)
 if platform_config.CAMERA_ENABLED:
     app.include_router(camera.router, prefix="/api")
 if not platform_config.IS_VERCEL:
