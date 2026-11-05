@@ -4,12 +4,21 @@
   const video = el('localCameraFeed'), overlay = el('cameraOverlay');
   const capture = document.createElement('canvas');
   let controller = null, stream = null, timer = null, generation = 0, frameId = 0;
+  let trackingId = null, pendingFrame = null, lastResult = 0;
+  const siteId = new URLSearchParams(window.location.search).get('site');
+  function path(suffix){
+    return '/vision/streams' + suffix + '?site_id=' + encodeURIComponent(siteId || '');
+  }
+  function closeTracking(id){
+    if(id) void dgApi(path('/' + id),{method:'DELETE'}).catch(()=>{});
+  }
   const labels = {SWIMMING:'수영', DROWNING:'익수 의심', UNCLEAR:'판단 보류'};
   function clearBoxes(){
     overlay.getContext('2d').clearRect(0, 0, overlay.width, overlay.height);
   }
   function disconnect(){
     generation++;
+    closeTracking(trackingId); trackingId = null; pendingFrame = null; lastResult = 0;
     clearTimeout(timer);
     if(controller) controller.abort();
     controller = null;
@@ -32,6 +41,8 @@
     const size = data.image_size;
     if(!Array.isArray(size) || size.length !== 2 || !(size[0]>0 && size[1]>0)) throw new Error('AI 응답의 이미지 크기가 올바르지 않습니다.');
     overlay.width = size[0]; overlay.height = size[1];
+    // Draw boxes on the exact analyzed image, never on a later live frame.
+    context.drawImage(capture,0,0,overlay.width,overlay.height);
     const detections = Array.isArray(data.detections) ? data.detections : [];
     context.lineWidth = 3; context.font = '18px sans-serif';
     for(const item of detections){
@@ -41,38 +52,64 @@
       context.strokeStyle = state === 'DROWNING' ? '#ff5050' : state === 'SWIMMING' ? '#32e58b' : '#ffd166';
       context.fillStyle = context.strokeStyle;
       context.strokeRect(x1,y1,x2-x1,y2-y1);
-      context.fillText(`${labels[state] || '판단 보류'} · 탐지 ${Math.round((item.confidence || 0)*100)}%`, Math.max(0,x1), Math.max(22,y1-8));
+      context.fillText(`${item.track_id == null ? 'ID 대기' : 'ID ' + (data.track_generation || 0) + '-' + item.track_id} · ${labels[state] || '판단 보류'} · 탐지 ${Math.round((item.confidence || 0)*100)}%`, Math.max(0,x1), Math.max(22,y1-8));
     }
     el('cameraBadge').textContent = 'AI LIVE';
-    el('videoReadout').textContent = `AI 분석 · 탐지 ${detections.length}개 · ${Math.round(data.inference_ms || 0)}ms`;
-    el('cameraStatus').textContent = detections.length ? 'AI 분석 중 · 박스는 최근 분석 프레임의 결과입니다.' : 'AI 분석 중 · 탐지된 대상 없음';
+    el('videoReadout').textContent = `분석 프레임 · 추적 ${detections.length}개 · ${Math.round(data.inference_ms || 0)}ms`;
+    el('cameraStatus').textContent = detections.length ? 'ByteTrack 추적 중 · ID는 현재 연결 안에서 유지됩니다.' : 'AI 분석 중 · 탐지된 대상 없음';
   }
   async function analyze(run){
     if(run !== generation || !stream) return;
     const request = new AbortController(); controller = request;
     const timeout = setTimeout(() => request.abort(), 60000);
     try{
-      if(!video.videoWidth || !video.videoHeight) throw new Error('카메라 영상을 준비 중입니다.');
-      capture.width = Math.min(960,video.videoWidth);
-      capture.height = Math.round(video.videoHeight*capture.width/video.videoWidth);
-      capture.getContext('2d').drawImage(video,0,0,capture.width,capture.height);
-      const blob = await new Promise(resolve => capture.toBlob(resolve,'image/jpeg',0.8));
+      if(!siteId) throw new Error('사이트 선택 화면에서 사이트를 선택한 뒤 연결하세요.');
+      if(!trackingId){
+        const opened = await dgApi(path(''),{method:'POST',signal:request.signal});
+        if(run !== generation){closeTracking(opened.stream_id);return;}
+        trackingId = opened.stream_id;
+      }
+      if(!pendingFrame){
+        if(!video.videoWidth || !video.videoHeight) throw new Error('카메라 영상을 준비 중입니다.');
+        capture.width = Math.min(960,video.videoWidth);
+        capture.height = Math.round(video.videoHeight*capture.width/video.videoWidth);
+        const capturedAt = new Date().toISOString();
+        capture.getContext('2d').drawImage(video,0,0,capture.width,capture.height);
+        const blob = await new Promise(resolve => capture.toBlob(resolve,'image/jpeg',0.8));
+        if(run !== generation) return;
+        if(!blob) throw new Error('카메라 이미지를 생성하지 못했습니다.');
+        const current = ++frameId;
+        const body = new FormData(); body.append('image',blob,'frame.jpg');
+        body.append('frame_id',String(current)); body.append('captured_at',capturedAt);
+        body.append('image_width',String(capture.width)); body.append('image_height',String(capture.height));
+        clearBoxes(); overlay.hidden = true;
+        pendingFrame = {id:current, started:Date.now()};
+        await dgApi(path('/' + trackingId + '/frames'),{method:'POST',body,signal:request.signal});
+        if(run !== generation) return;
+      }
+      const snapshot = await dgApi(path('/' + trackingId + '/results'),{signal:request.signal});
       if(run !== generation) return;
-      if(!blob) throw new Error('카메라 이미지를 생성하지 못했습니다.');
-      const body = new FormData(); body.append('image',blob,'frame.jpg'); body.append('frame_id',String(++frameId));
-      const result = await dgApi('/camera/analyze',{method:'POST',body,signal:request.signal});
-      if(run !== generation) return;
-      draw(result);
+      if(snapshot.last_error) throw new Error('추적 서버 분석 실패: ' + snapshot.last_error);
+      const result = snapshot.analysis;
+      if(result && !result.expired && result.frame_id === pendingFrame.id && result.frame_id > lastResult){
+        draw(result); overlay.hidden = false;
+        lastResult = result.frame_id; pendingFrame = null;
+      }else if(Date.now() - pendingFrame.started > 65000){
+        throw new Error('추적 분석 시간이 초과되었습니다.');
+      }else{
+        el('cameraStatus').textContent = 'AI 추적 분석 중…';
+      }
     }catch(error){
       if(run !== generation) return;
-      clearBoxes();
+      closeTracking(trackingId); trackingId = null; pendingFrame = null;
+      clearBoxes(); overlay.hidden = true;
       el('cameraBadge').textContent = 'AI 연결 대기';
       el('cameraStatus').textContent = request.signal.aborted ? 'AI 응답 시간이 초과되었습니다. 다시 시도합니다.' : `AI 분석 실패: ${error.message}`;
       el('videoReadout').textContent = '카메라 미리보기 · AI 결과 없음';
       if(!dgGetSession()){disconnect();el('cameraStatus').textContent='세션이 만료되었습니다. 다시 로그인하세요.';return;}
     }finally{
       clearTimeout(timeout);
-      if(run === generation && stream) timer = setTimeout(() => analyze(run),1500);
+      if(run === generation && stream) timer = setTimeout(() => analyze(run),pendingFrame ? 700 : 1000);
     }
   }
   el('cameraForm').addEventListener('submit',async event => {
