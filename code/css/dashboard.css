@@ -175,8 +175,11 @@
 .roi-editor::before{content:'ROI AREA';position:absolute;inset:12% 8% 16%;border:2px solid var(--teal);clip-path:polygon(12% 20%,80% 5%,100% 83%,45% 100%,0 75%);background:rgba(66,232,227,.08)}
 .field,.toggle-row{background:rgba(3,16,32,.25);padding:11px 10px;border-bottom:1px solid #173754}.field{margin:0}
 
-@media(max-width:1050px){.control-grid{grid-template-columns:1fr}.timeline-card{grid-column:1}.video-panel{min-height:390px}.side-col{display:grid;grid-template-columns:1fr 1fr}.timeline-card .log-list{grid-template-columns:repeat(4,minmax(150px,1fr))}}
-@media(max-width:720px){.control-grid,.settings-grid{display:block}.side-col{display:block}.side-col .card,.settings-grid>.card,.settings-grid>div{margin-top:12px}.video-panel{min-height:330px}.timeline-card .log-list{grid-template-columns:repeat(3,170px)}}
+/* Preserve the desktop canvas in narrow windows; make its full width reachable.
+   !important overrides the legacy inline body overflow:hidden on dashboard pages. */
+body{overflow-x:auto!important}
+.app{min-width:1200px}
+.view{min-width:0;min-height:0}
 
 /* Live video replaces the decorative simulation scene. */
 /* Keep the header on one horizontal line, including Korean labels. */
