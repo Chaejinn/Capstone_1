@@ -230,3 +230,11 @@ body{overflow-x:auto!important}
 .board-icon.carrying .board-passenger{display:block;}
 .det-box.rescued{border-color:var(--teal);transition:left .5s linear,top .5s linear;}
 .det-box.rescued .lbl{background:var(--teal);color:var(--bg);}
+
+/* Analysis snapshots never cover or pause the live camera video. */
+.ai-result-panel{width:min(100%,480px);margin:14px 0 0 auto;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--panel-2);}
+.ai-result-panel[hidden]{display:none;}
+.ai-result-heading{display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px;font-size:11px;margin-bottom:8px;}
+#aiResultInfo,#aiResultPlaceholder{font-size:11px;color:var(--text-2);}
+#cameraOverlay{display:block;width:100%;height:auto;background:#000;border-radius:4px;}
+#cameraOverlay[hidden],#aiResultPlaceholder[hidden]{display:none;}

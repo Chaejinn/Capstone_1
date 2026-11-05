@@ -5,6 +5,12 @@
   const capture = document.createElement('canvas');
   let controller = null, stream = null, timer = null, generation = 0, frameId = 0;
   let trackingId = null, pendingFrame = null, lastResult = 0;
+  let resultClock = null, resultCapturedAt = null, resultInferenceMs = 0;
+  function updateResultTime(){
+    if(!resultCapturedAt) return;
+    const age = Math.max(0,(Date.now()-resultCapturedAt.getTime())/1000);
+    el('aiResultInfo').textContent = `촬영 ${resultCapturedAt.toLocaleTimeString('ko-KR',{hour12:false})} · ${age.toFixed(1)}초 전 · 분석 ${(resultInferenceMs/1000).toFixed(1)}초`;
+  }
   const siteId = new URLSearchParams(window.location.search).get('site');
   function path(suffix){
     return '/vision/streams' + suffix + '?site_id=' + encodeURIComponent(siteId || '');
@@ -20,6 +26,10 @@
     generation++;
     closeTracking(trackingId); trackingId = null; pendingFrame = null; lastResult = 0;
     clearTimeout(timer);
+    clearInterval(resultClock); resultClock = null; resultCapturedAt = null;
+    el('aiResultPanel').hidden = true;
+    el('aiResultPlaceholder').hidden = false;
+    el('aiResultInfo').textContent = '분석 결과 대기';
     if(controller) controller.abort();
     controller = null;
     if(stream) stream.getTracks().forEach(track => {track.onended = null; track.stop();});
@@ -52,10 +62,14 @@
       context.strokeStyle = state === 'DROWNING' ? '#ff5050' : state === 'SWIMMING' ? '#32e58b' : '#ffd166';
       context.fillStyle = context.strokeStyle;
       context.strokeRect(x1,y1,x2-x1,y2-y1);
-      context.fillText(`${item.track_id == null ? 'ID 대기' : 'ID ' + (data.track_generation || 0) + '-' + item.track_id} · ${labels[state] || '판단 보류'} · 탐지 ${Math.round((item.confidence || 0)*100)}%`, Math.max(0,x1), Math.max(22,y1-8));
+      context.fillText(`${item.track_id == null ? 'ID 대기' : 'ID ' + (item.track_generation ?? data.track_generation ?? 0) + '-' + item.track_id} · ${labels[state] || '판단 보류'} · 탐지 ${Math.round((item.confidence || 0)*100)}%`, Math.max(0,x1), Math.max(22,y1-8));
     }
-    el('cameraBadge').textContent = 'AI LIVE';
-    el('videoReadout').textContent = `분석 프레임 · 추적 ${detections.length}개 · ${Math.round(data.inference_ms || 0)}ms`;
+    el('aiResultPlaceholder').hidden = true;
+    resultCapturedAt = new Date(data.captured_at || pendingFrame.capturedAt);
+    resultInferenceMs = data.inference_ms || 0;
+    updateResultTime();
+    el('cameraBadge').textContent = 'CAM LIVE';
+    el('videoReadout').textContent = '실시간 카메라 · AI 결과는 아래에 표시됩니다.';
     el('cameraStatus').textContent = detections.length ? 'ByteTrack 추적 중 · ID는 현재 연결 안에서 유지됩니다.' : 'AI 분석 중 · 탐지된 대상 없음';
   }
   async function analyze(run){
@@ -82,8 +96,7 @@
         const body = new FormData(); body.append('image',blob,'frame.jpg');
         body.append('frame_id',String(current)); body.append('captured_at',capturedAt);
         body.append('image_width',String(capture.width)); body.append('image_height',String(capture.height));
-        clearBoxes(); overlay.hidden = true;
-        pendingFrame = {id:current, started:Date.now()};
+        pendingFrame = {id:current, started:Date.now(), capturedAt};
         await dgApi(path('/' + trackingId + '/frames'),{method:'POST',body,signal:request.signal});
         if(run !== generation) return;
       }
@@ -102,10 +115,9 @@
     }catch(error){
       if(run !== generation) return;
       closeTracking(trackingId); trackingId = null; pendingFrame = null;
-      clearBoxes(); overlay.hidden = true;
-      el('cameraBadge').textContent = 'AI 연결 대기';
+      el('cameraBadge').textContent = 'CAM LIVE';
       el('cameraStatus').textContent = request.signal.aborted ? 'AI 응답 시간이 초과되었습니다. 다시 시도합니다.' : `AI 분석 실패: ${error.message}`;
-      el('videoReadout').textContent = '카메라 미리보기 · AI 결과 없음';
+      el('videoReadout').textContent = '실시간 카메라 · AI 연결 재시도 중';
       if(!dgGetSession()){disconnect();el('cameraStatus').textContent='세션이 만료되었습니다. 다시 로그인하세요.';return;}
     }finally{
       clearTimeout(timeout);
@@ -124,9 +136,12 @@
       if(run !== generation) return;
       stream.getVideoTracks().forEach(track => {track.onended=()=>{if(run===generation){disconnect();el('cameraStatus').textContent='카메라 연결이 종료되었습니다.';}};});
       pauseSim(); window.dgCameraLive = true; updateSimControls();
-      video.hidden = false; overlay.hidden = false;
+      video.hidden = false; overlay.hidden = true;
+      el('aiResultPanel').hidden = false;
+      resultClock = setInterval(updateResultTime,1000);
       el('videoPanel').classList.add('camera-connected');
-      el('cameraBadge').textContent = 'AI 분석 대기';
+      el('cameraBadge').textContent = 'CAM LIVE';
+      el('videoReadout').textContent = '실시간 카메라 · AI 결과는 아래에 표시됩니다.';
       el('cameraStatus').textContent = '카메라 연결됨';
       void analyze(run);
     }catch(error){
