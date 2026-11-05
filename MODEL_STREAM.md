@@ -2,6 +2,13 @@
 
 ## 422 원인·지연 측정 (2026-11-05)
 
+운영 배포 소스에서 DB 연결 풀(`pool_size=2`, `max_overflow=1`) 반영을 확인했습니다.
+운영 함수는 미국 동부(`iad1`), Neon DB는 싱가포르(`ap-southeast-1`)에 있었습니다.
+Vercel 프로젝트의 Fluid 함수 기본 리전과 로컬 `vercel.json`을 싱가포르(`sin1`)로
+맞추고 기존 운영 소스를 재배포했습니다. 배포 `dpl_GKEKXJFERQ7GRHVcv7Hi6bqSCCJR`의
+`READY`, 리전 `sin1`, 운영 `/api/health`의 HTTP 200 및 `x-vercel-id`의 `sin1`을
+확인했습니다. 실제 웹캠 프레임 업로드의 지연과 422 재발 여부는 추가 확인이 필요합니다.
+
 프레임 접수 제한은 **2초로 유지**했습니다. 실제 거부 응답은
 `observed_age_seconds=2.768; limit=2`였으며, Vercel 인증·사이트 조회에
 1,982.4ms, 추적 서버 왕복에 240.4ms가 걸렸습니다. Vercel의 DB `NullPool`을
