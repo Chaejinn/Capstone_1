@@ -1,4 +1,4 @@
-/* Browser camera -> authenticated local backend -> Modal. No API keys in browser. */
+/* Browser camera -> authenticated backend -> AI API. No API keys in browser. */
 (function(){
   const el = id => document.getElementById(id);
   const video = el('localCameraFeed'), overlay = el('cameraOverlay');
@@ -44,7 +44,7 @@
       context.fillText(`${labels[state] || '판단 보류'} · 탐지 ${Math.round((item.confidence || 0)*100)}%`, Math.max(0,x1), Math.max(22,y1-8));
     }
     el('cameraBadge').textContent = 'AI LIVE';
-    el('videoReadout').textContent = `Modal 분석 · 탐지 ${detections.length}개 · ${Math.round(data.inference_ms || 0)}ms`;
+    el('videoReadout').textContent = `AI 분석 · 탐지 ${detections.length}개 · ${Math.round(data.inference_ms || 0)}ms`;
     el('cameraStatus').textContent = detections.length ? 'AI 분석 중 · 박스는 최근 분석 프레임의 결과입니다.' : 'AI 분석 중 · 탐지된 대상 없음';
   }
   async function analyze(run){
