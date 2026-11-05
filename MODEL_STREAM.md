@@ -1,5 +1,26 @@
 # 카메라 AI 분석 연결
 
+## 현재 운영 모델 (2026-11-05)
+
+Modal의 `drown-guardian-api`에 RF-DETR ONNX와 **Moondream2 + 학습된 LoRA**를
+배포했습니다. Moondream2 기본 버전은 `6b714b26eea5cbd9f31e4edb2541c170afa935ba`이며,
+분류 어댑터는 전달받은 `drown-guardian-models.zip`의 파일입니다.
+`model.json`의 `adapter_path`를 통해 실제 학습 어댑터를 로딩합니다.
+분류는 Modal GPU에서 실행하며 기존 Moondream Cloud 분류 모델을 호출하지 않습니다.
+
+- 운영 웹: https://drown-guardian.vercel.app
+- 모델 API: https://kbkr504--drown-guardian-api-fastapi-app.us-east.modal.run
+- Modal 배포 준비본: `local-model/modal-moondream2-deploy` (가중치 포함, Git 제외)
+- Vercel 재배포: `dpl_uZwWBgZDCQ93dP2Ns85fCD3UJMGn`
+
+운영 웹 로그인 후 `/api/camera/analyze`로 샘플 JPEG를 전송해 HTTP 200과
+탐지 3개, `SWIMMING` 분류 3개를 확인했습니다. 이는 연동 확인이며 모델의
+일반적인 정확도나 실제 웹캠·자동출동 검증을 뜻하지 않습니다.
+
+배포 시 토크나이저의 고정 snapshot을 내려받은 뒤 Hugging Face 캐시의
+`refs/main`도 같은 revision으로 지정해야 합니다. Moondream 내부에서
+토크나이저를 revision 없이 읽기 때문에 이 설정이 없으면 오프라인 실행이 실패합니다.
+
 ## Modal 배포 없이 로컬 실행
 
 `scripts/local_ai.py`는 웹과 모델의 실제 `/detect` API를 하나의 로컬 서버로
