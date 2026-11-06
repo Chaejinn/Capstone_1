@@ -62,6 +62,8 @@
       context.strokeStyle = state === 'DROWNING' ? '#ff5050' : state === 'SWIMMING' ? '#32e58b' : '#ffd166';
       context.fillStyle = context.strokeStyle;
       context.strokeRect(x1,y1,x2-x1,y2-y1);
+      const score = Number.isFinite(item.drowning_score) ? (item.drowning_score*100).toFixed(1)+'%' : '미제공';
+      context.fillText(`익수 점수 ${score} · 연속 ${item.consecutive_frames || 0}/${item.required_frames || 15}`, Math.max(0,x1), Math.min(size[1]-8,Math.max(44,y1+24)));
       context.fillText(`${item.track_id == null ? 'ID 대기' : 'ID ' + (item.track_generation ?? data.track_generation ?? 0) + '-' + item.track_id} · ${labels[state] || '판단 보류'} · 탐지 ${Math.round((item.confidence || 0)*100)}%`, Math.max(0,x1), Math.max(22,y1-8));
     }
     el('aiResultPlaceholder').hidden = true;
@@ -70,7 +72,7 @@
     updateResultTime();
     el('cameraBadge').textContent = 'CAM LIVE';
     el('videoReadout').textContent = '실시간 카메라 · AI 결과는 아래에 표시됩니다.';
-    el('cameraStatus').textContent = detections.length ? 'ByteTrack 추적 중 · ID는 현재 연결 안에서 유지됩니다.' : 'AI 분석 중 · 탐지된 대상 없음';
+    el('cameraStatus').textContent = detections.some(item=>item.confirmed) ? '익수 확정 · 실제 출동 차단: 좌표 보정·보트 브릿지 연결 필요' : detections.length ? '대상별 익수 점수 0.8 이상 · 15프레임 연속 확인 중' : 'AI 분석 중 · 탐지된 대상 없음';
   }
   async function analyze(run){
     if(run !== generation || !stream) return;
