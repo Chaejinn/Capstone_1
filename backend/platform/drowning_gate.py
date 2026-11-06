@@ -9,6 +9,7 @@ class Evidence:
     last_capture: float = -math.inf
     count: int = 0
     active: bool = False
+    confirmed_at: float | None = None
 
 
 class DrowningGate:
@@ -18,7 +19,7 @@ class DrowningGate:
         self.threshold, self.frames, self.max_gap = threshold, frames, max_gap_seconds
         self.tracks = {}
 
-    def observe(self, track, frame_id, captured_at, state, drowning_score):
+    def observe(self, track, frame_id, captured_at, state, drowning_score, decided_at=None):
         if track is None or not math.isfinite(captured_at):
             return None
         evidence = self.tracks.setdefault(track, Evidence())
@@ -34,8 +35,12 @@ class DrowningGate:
         evidence.count = min(self.frames, evidence.count + 1) if valid else 0
         confirmed = evidence.count >= self.frames
         first = confirmed and not evidence.active
+        if first:
+            evidence.confirmed_at = captured_at if decided_at is None else decided_at
+        elif not confirmed:
+            evidence.confirmed_at = None
         evidence.active = confirmed
-        return {'confirmed':confirmed,'new_confirmation':first,'consecutive_frames':evidence.count,
+        return {'confirmed_at':evidence.confirmed_at,'confirmed':confirmed,'new_confirmation':first,'consecutive_frames':evidence.count,
                 'required_frames':self.frames,'score_threshold':self.threshold,
                 'decision':'DROWNING_CONFIRMED' if confirmed else 'OBSERVING'}
 

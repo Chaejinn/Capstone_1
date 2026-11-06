@@ -36,7 +36,8 @@ async function scenario({result, error, deferredCamera=false}){
 const live=await scenario({result:{image_size:[640,480],detections:[{bbox:[10,20,110,120],water_state:'DROWNING',confidence:0.8,track_id:42}]}});
 assert.equal(live.calls[0].path,'/vision/streams?site_id=chunjeon');
 assert.match(live.calls[1].path,/session-one\/frames/);
-assert.ok(live.texts[0].includes('ID 0-42')); 
+assert.ok(live.texts.some(text=>text.includes('ID 0-42')));
+assert.ok(live.texts.some(text=>text.includes('연속 0/15'))); 
 assert.ok(live.calls[1].options.body.get('image') instanceof Blob);
 assert.equal(live.elements.get('cameraBadge').textContent,'CAM LIVE');
 assert.equal(live.elements.get('localCameraFeed').hidden,false);
