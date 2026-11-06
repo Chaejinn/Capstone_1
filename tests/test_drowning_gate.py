@@ -27,3 +27,10 @@ class GateTests(unittest.TestCase):
         gate.retain({2})
         self.assertEqual(gate.observe(1,3,3.,'DROWNING',0.9)['consecutive_frames'],1)
         self.assertEqual(gate.observe(1,4,30.,'DROWNING',0.9)['consecutive_frames'],1)
+
+    def test_confirmation_time_does_not_slide_with_later_frames(self):
+        gate=DrowningGate()
+        for frame in range(1,16):
+            result=gate.observe(1,frame,float(frame),'DROWNING',0.9,decided_at=100.+frame)
+        self.assertEqual(result['confirmed_at'],115.)
+        self.assertEqual(gate.observe(1,16,16.,'DROWNING',0.9,decided_at=200.)['confirmed_at'],115.)
