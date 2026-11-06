@@ -1,0 +1,30 @@
+--- a/src/flow/judgement/moondream2_lora.py
++++ b/src/flow/judgement/moondream2_lora.py
+@@ -255,11 +255,26 @@
+             LOGGER.info("Moondream2 LoRA adapter merged into %d layers (%s)", merged, adapter_dir)
+         else:
+             LOGGER.warning("Moondream2 running WITHOUT a fine-tuned adapter (base zero-shot)")
++        # Keep the original BF16 LoRA merge, then use native FP16 compute on T4.
++        # Autocast below also converts the base model's BF16 image preprocessing.
++        import os
++        precision = os.environ.get("DG_MODEL_PRECISION", "auto")
++        if precision not in ("auto", "bf16"):
++            raise ValueError("DG_MODEL_PRECISION must be auto or bf16")
++        self.use_fp16 = (precision == "auto" and self.scorer.device.type == "cuda"
++                         and not torch.cuda.is_bf16_supported(including_emulation=False))
++        if self.use_fp16:
++            self.scorer.hf.half()
+         self.scorer.place("all")
++        LOGGER.info("Moondream2 inference precision: %s", "fp16" if self.use_fp16 else "bf16")
+         LOGGER.info("Moondream2 placed on %s", device)
+ 
+     def classify_state(self, crop_bgr: np.ndarray, question: str) -> dict[str, Any]:
+-        probs = self.scorer.label_probabilities(self.scorer.encode_crop(crop_bgr), question)
++        with self.scorer.torch.inference_mode(), self.scorer.torch.autocast(
++            device_type=self.scorer.device.type, dtype=self.scorer.torch.float16,
++            enabled=self.use_fp16,
++        ):
++            probs = self.scorer.label_probabilities(self.scorer.encode_crop(crop_bgr), question)
+         best = max(probs, key=probs.get)
+         answer = best if probs[best] >= self.unclear_below else "UNCLEAR"
+         return {

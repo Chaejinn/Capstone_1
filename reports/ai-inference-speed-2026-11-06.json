@@ -1,0 +1,49 @@
+{
+  "date": "2026-11-06",
+  "sample": "repository JPEG, 640x480, three human_dummy detections",
+  "gpu": "Tesla T4",
+  "baseline_ms": [
+    7234.002870000001,
+    6656.121480999999,
+    6677.769052000002
+  ],
+  "optimized_ms": [
+    935.3460399999989,
+    931.7326890000004,
+    934.1062370000018
+  ],
+  "sample_outputs_equal": true,
+  "production_model_inference_ms": [
+    2662.644,
+    1058.629,
+    1126.709
+  ],
+  "production_send_timestamp_to_inferred_seconds": [
+    5.565,
+    3.758,
+    3.808
+  ],
+  "production_upload_http": [
+    200,
+    200,
+    200
+  ],
+  "production_track_ids": [
+    [
+      1,
+      2,
+      3
+    ],
+    [
+      1,
+      2,
+      3
+    ],
+    [
+      1,
+      2,
+      3
+    ]
+  ],
+  "limits": "Single repeated sample; not an accuracy benchmark, camera latency measurement, or proof of 15-frame real-time judgement."
+}
