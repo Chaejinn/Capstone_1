@@ -1,9 +1,7 @@
-# Drown Guardian · 관제 플랫폼 (프론트엔드 프로토타입)
+# Drown Guardian · 관제 플랫폼 
 
-캡스톤디자인 「Drown Guardian」요구사항정의서(SRS v1.0)를 기반으로 만든,
-**실제로 동작하는** 관제 플랫폼 프론트엔드입니다. 백엔드 없이 브라우저의
-`localStorage`만으로 로그인 세션·계정·사이트·설정·감사 로그를 실제로
-저장/공유하므로, 여러 페이지를 오가며 상태가 실제로 유지됩니다.
+캡스톤디자인 「Drown Guardian」,
+관제 플랫폼 프론트엔드입니다.
 
 ## 폴더 구조 (분야별 코드 분리)
 
@@ -34,9 +32,7 @@ drown-guardian-platform/
   `js/auth.js`의 `dgRequireRole(['admin'])` 가드에 의해 실제 관리자 계정으로
   로그인하지 않으면 즉시 로그인 페이지로 리다이렉트됩니다.
 - 관리자 패널의 **계정 관리**에서 새 운영자 계정을 추가하면,
-  즉시 `index.html`에서 그 계정으로 로그인할 수 있습니다 (실제 연동).
-- 실제 배포 시에는 `js/auth.js`의 `DG.ADMIN` 하드코딩 값을 서버 측 인증으로
-  반드시 교체하세요 (프론트엔드 코드에 있는 값은 브라우저에서 열람 가능합니다).
+  즉시 `index.html`에서 그 계정으로 로그인할 수 있습니다.
 
 ## 코드 수정 포인트
 
@@ -46,21 +42,6 @@ drown-guardian-platform/
 - **사이트 목록**: `js/auth.js`의 `dgSeed()` 내 `DG.KEYS.sites` 초기값, 또는 관리자 패널에서 직접 추가
 
 ## 참고
-
-### GitHub 자동 반영
-
-VS Code에서 이 폴더를 열면 `scripts/auto-git-sync.sh`가 변경을 감시하고
-약 5~10초 후 커밋하여 아래 두 저장소의 `main`에 각각 푸시합니다.
-
-- `origin`: https://github.com/Chaejinn/Capstone_1.git
-- `drownguardian`: https://github.com/DrownGuardian/Web-Platform.git
-
-새로 복제한 환경에서는 `git remote -v`를 확인하고, 없는 원격을 위 이름과 URL로
-`git remote add <이름> <URL>`로 등록하세요. 두 저장소의 쓰기 권한이 필요합니다.
-한쪽 푸시가 실패해도 다른 쪽은 처리하며, 실패한 쪽은 다음 주기에 재시도합니다.
-원격의 다른 변경을 자동으로 pull하거나 강제 푸시하지 않으므로 이력이 갈라지면 수동 병합이 필요합니다.
-병합·리베이스 중이거나 `main` 이외의 브랜치에서는 자동 반영을 멈춥니다.
-VS Code 작업을 종료하면 감시도 종료됩니다.
 
 - 본 프로젝트는 SRS의 FR/NFR 요구사항 ID를 UI 곳곳에 태그로 표기하여
   문서와 화면을 상호 대조할 수 있게 했습니다.
