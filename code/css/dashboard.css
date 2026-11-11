@@ -218,7 +218,7 @@ body{overflow-x:auto!important}
 .video-panel.camera-connected #boardIcon,.video-panel.camera-connected #targetBox{visibility:hidden;}
 .video-panel.camera-connected #alertBanner{visibility:hidden;}
 .video-panel.camera-connected #roiPolyControl{stroke:var(--teal);fill:rgba(45,217,196,.06);stroke-dasharray:none;}
-.roi-editor.has-camera{height:auto;aspect-ratio:var(--roi-camera-aspect,16/9);background:#000;}
+.roi-editor.has-camera{box-sizing:content-box;height:auto;aspect-ratio:var(--roi-camera-aspect,16/9);background:#000;}
 .roi-editor.has-camera::before{display:none;}
 #roiCameraFeed{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000;}
 #roiCameraFeed[hidden]{display:none;}
