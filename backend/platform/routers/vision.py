@@ -86,8 +86,17 @@ async def read_body(request, limit):
 
 
 @router.post('/streams', status_code=201)
-async def create(identity=Depends(scope)):
-    return await forward('/v1/streams', 'POST', identity, b'{"camera_id":"camera-01"}', 'application/json')
+async def create(identity=Depends(scope),db:Session=Depends(get_db)):
+    import json
+    from .camera_settings import configuration
+    _,_,value=configuration(db,identity[1])
+    payload={'camera_id':'camera-01','configuration':value.model_dump(mode='json')}
+    opened=await forward('/v1/streams','POST',identity,json.dumps(payload).encode(),'application/json')
+    if (value.revision or value.homography.enabled or value.aruco.enabled) and opened.get('configuration_revision')!=value.revision:
+        if opened.get('stream_id'):
+            await forward('/v1/streams/'+opened['stream_id'],'DELETE',identity)
+        raise HTTPException(502,'추적 서버가 저장한 카메라 설정을 적용하지 못했습니다.')
+    return opened
 
 
 @router.post('/streams/{stream_id}/frames')

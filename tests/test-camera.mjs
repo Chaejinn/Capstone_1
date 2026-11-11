@@ -31,7 +31,7 @@ async function scenario({result, error, deferredCamera=false}){
   if(deferredCamera){element('cameraDisconnectBtn').handlers.click();pendingCamera(stream);}
   await start;
   for(let i=0;i<40;i++)await Promise.resolve();
-  return {elements,calls,drawings,texts,timers,intervals,track,stopped:()=>stopped,disconnect:()=>element('cameraDisconnectBtn').handlers.click()};
+  return {elements,calls,drawings,texts,timers,intervals,track,stopped:()=>stopped,disconnect:()=>element('cameraDisconnectBtn').handlers.click(),restart:context.window.dgRestartCameraTracking};
 }
 const live=await scenario({result:{image_size:[640,480],detections:[{bbox:[10,20,110,120],water_state:'DROWNING',confidence:0.8,track_id:42}]}});
 assert.equal(live.calls[0].path,'/vision/streams?site_id=chunjeon');
@@ -60,4 +60,11 @@ assert.equal(failed.elements.get('cameraBadge').textContent,'CAM LIVE');
 assert.equal(failed.elements.get('localCameraFeed').hidden,false,'AI failure must not interrupt live video');failed.disconnect();
 const canceled=await scenario({deferredCamera:true});
 assert.ok(canceled.stopped());assert.equal(canceled.calls.length,0,'Canceled camera permission must not start inference');
+const reconfigured=await scenario({result:{image_size:[640,480],detections:[]}});
+const media=reconfigured.elements.get('localCameraFeed').srcObject;
+reconfigured.restart();for(let i=0;i<40;i++)await Promise.resolve();
+assert.equal(reconfigured.elements.get('localCameraFeed').srcObject,media,'Setting changes reuse the same camera');
+assert.equal(reconfigured.stopped(),false);
+assert.equal(reconfigured.calls.filter(call=>call.path.startsWith('/vision/streams?')).length,2);
+reconfigured.disconnect();
 console.log('Camera inference, boxes, empty results, errors, disconnect, and permission cancellation passed');

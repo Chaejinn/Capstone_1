@@ -52,6 +52,15 @@ class EdgePose(Base):
     updated_at = Column(DateTime, default=now_utc, nullable=False)
 
 
+class CameraConfiguration(Base):
+    __tablename__ = 'camera_configurations'
+    scope_key = Column(String(64), primary_key=True)
+    site_id = Column(String(30), ForeignKey('sites.id'), nullable=False)
+    camera_id = Column(String(80), nullable=False)
+    payload_json = Column(Text, nullable=False)
+    updated_at = Column(DateTime, default=now_utc, nullable=False)
+
+
 class User(Base):
     """운영자/관리자 계정. FR-SEC-004(제안) — 관제 대시보드 인증·권한 분리."""
     __tablename__ = "users"

@@ -10,7 +10,7 @@ from backend.platform import config as platform_config, main as platform
 from backend.platform.routers import auth, users, sites, settings, contacts, audit
 from backend.platform.routers import camera, events as platform_events, ai_bridge as platform_ai, ws as platform_ws
 from backend.platform.routers import camera_analysis
-from backend.platform.routers import vision, edge, edge_pose
+from backend.platform.routers import vision, edge, edge_pose, camera_settings
 from backend.platform.routers import test_signals, test_control, test_push
 from .database import Base, SessionLocal, engine
 from .routers import ai_bridge, boat, calibration, config_router, events, judgement, mission, status, ws
@@ -54,6 +54,7 @@ app.add_api_route("/api/maintenance/reset", platform.reset, methods=["POST"], ta
 app.include_router(vision.router, prefix="/api")
 app.include_router(edge.router, prefix="/api")
 app.include_router(edge_pose.router, prefix="/api")
+app.include_router(camera_settings.router, prefix="/api")
 vision.install_timing(app)
 if platform_config.CAMERA_ENABLED:
     app.include_router(camera.router, prefix="/api")

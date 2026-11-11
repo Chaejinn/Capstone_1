@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/common.css">
-<link rel="stylesheet" href="css/dashboard.css?v=live-roi-2">
+<link rel="stylesheet" href="css/dashboard.css?v=camera-configuration-1">
 <style>body{overflow:hidden; height:100vh;}</style>
 </head>
 <body>
@@ -101,6 +101,7 @@
               <button class="btn" id="cameraRoiBtn" type="button" onclick="switchView('settings')" disabled>영상 보며 ROI 설정</button>
             </form>
             <p id="cameraStatus" role="status"></p>
+            <p id="cameraConfigurationStatus" role="status"></p>
           </details>
 
           <details class="camera-settings">
@@ -193,6 +194,50 @@
     <div class="section-title">설정</div>
     <div class="section-sub">감시 ROI, 판정 임계값, 야간 모드, 개인정보 옵션을 구성합니다.</div>
 
+    <div class="camera-configuration-grid">
+      <section class="card">
+        <h3>호모그래피 · 수조 실좌표 설정</h3>
+        <label class="camera-setting-option"><input id="homographyEnabled" type="checkbox"> 호모그래피 사용</label>
+        <p class="camera-setting-help">영상에서 실제 수조의 좌상 → 우상 → 우하 → 좌하 순서로 4점을 지정하세요. ROI와는 별도로 저장됩니다.</p>
+        <div class="calibration-camera" id="homographyEditor">
+          <video id="homographyCameraFeed" autoplay muted playsinline hidden aria-label="호모그래피 보정용 실시간 영상"></video>
+          <svg id="homographySvg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-label="수조 기준점 4개"></svg>
+          <span id="homographyCameraHint">먼저 관제 화면에서 카메라를 연결하세요.</span>
+        </div>
+        <div class="sim-controls"><button class="btn" id="homographyPickBtn" type="button">기준점 4개 다시 지정</button><span id="homographyPointCount">0 / 4점</span></div>
+        <div class="camera-setting-fields">
+          <label>수조 실측 너비(m)<input id="poolWidth" type="number" min="0.001" step="0.001" placeholder="예: 0.30"></label>
+          <label>수조 실측 높이(m)<input id="poolHeight" type="number" min="0.001" step="0.001" placeholder="예: 0.45"></label>
+          <label>좌표계 이름<input id="poolFrame" value="pool-01" maxlength="80"></label>
+        </div>
+        <p class="camera-setting-help">원점은 실제 수조 좌하단, +X 오른쪽, +Y 위쪽입니다. 카메라 위치·방향이 바뀌면 다시 보정하세요.</p>
+        <div class="sim-controls"><button class="btn primary" id="homographySaveBtn" type="button">호모그래피 저장 · 적용</button></div>
+        <p id="homographyStatus" class="camera-setting-help" role="status">설정 조회 중…</p>
+      </section>
+      <section class="card">
+        <h3>ArUco · 구조보드 마커 설정</h3>
+        <label class="camera-setting-option"><input id="arucoEnabled" type="checkbox"> ArUco 마커 검출 사용</label>
+        <div class="camera-setting-fields">
+          <label>마커 사전<select id="arucoDictionary"><option>DICT_4X4_50</option><option>DICT_5X5_100</option><option>DICT_6X6_250</option></select></label>
+          <label>마커 ID<input id="arucoId" type="number" value="0" min="0" step="1"></label>
+          <label>검은 사각형 변 길이(cm)<input id="arucoSize" type="number" value="5" min="0.1" step="0.1"></label>
+          <label>실측 헤딩 오프셋(도)<input id="arucoOffset" type="number" min="-180" max="180" step="0.1" placeholder="미측정"></label>
+        </div>
+        <label class="camera-setting-option"><input id="arucoHeadingMeasured" type="checkbox"> 실제 선수 방향을 기준으로 헤딩 오프셋을 측정했습니다.</label>
+        <p class="camera-setting-help">마커의 위쪽 변이 기본 선수 방향입니다. 호모그래피 없이도 마커는 검출되며, 미터 좌표에는 호모그래피가 필요합니다. 헤딩은 +X=0°, 반시계 증가입니다.</p>
+        <div class="sim-controls">
+          <button class="btn primary" id="arucoSaveBtn" type="button">ArUco 저장 · 적용</button>
+          <button class="btn" id="arucoImageBtn" type="button">마커 이미지 만들기</button>
+          <button class="btn" id="arucoInspectBtn" type="button">저장한 설정으로 현재 영상 확인</button>
+        </div>
+        <p id="arucoStatus" class="camera-setting-help" role="status">설정 조회 중…</p>
+        <img id="arucoMarkerImage" hidden alt="선택한 ArUco 마커">
+        <a id="arucoMarkerDownload" hidden download="aruco-marker.png">마커 PNG 다운로드 (인쇄 후 검은 사각형 크기를 실측하세요)</a>
+        <canvas id="arucoInspection" hidden aria-label="설정 확인용 분석 프레임"></canvas>
+        <p id="arucoInspectionStatus" class="camera-setting-help" role="status"></p>
+      </section>
+    </div>
+
     <div class="settings-grid">
       <div class="card">
         <h3>감시 구역(ROI) 설정 <span class="tag">FR-SUR-002</span></h3>
@@ -254,6 +299,6 @@
 </div>
 
 <script src="js/auth.js?v=camera-unified-4"></script>
-<script src="js/bootstrap.js?v=camera-unified-4" data-scripts="js/dashboard.js?v=live-roi-1,js/analysis-layout.js?v=1,js/roi-camera.js?v=1,js/camera.js?v=live-roi-1,js/edge-camera.js?v=side-analysis-1"></script>
+<script src="js/bootstrap.js?v=camera-unified-4" data-scripts="js/dashboard.js?v=live-roi-1,js/analysis-layout.js?v=1,js/roi-camera.js?v=1,js/vision-settings.js?v=1,js/camera.js?v=camera-configuration-1,js/edge-camera.js?v=side-analysis-1"></script>
 </body>
 </html>
