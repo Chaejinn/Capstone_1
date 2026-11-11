@@ -35,6 +35,7 @@
     if(stream) stream.getTracks().forEach(track => {track.onended = null; track.stop();});
     stream = null;
     video.pause(); video.srcObject = null; video.hidden = true;
+    window.dgSyncRoiCamera?.(null);
     clearBoxes(); overlay.hidden = true;
     window.dgCameraLive = false;
     updateSimControls();
@@ -140,6 +141,7 @@
       stream.getVideoTracks().forEach(track => {track.onended=()=>{if(run===generation){disconnect();el('cameraStatus').textContent='카메라 연결이 종료되었습니다.';}};});
       pauseSim(); window.dgCameraLive = true; updateSimControls();
       video.hidden = false; overlay.hidden = true;
+      window.dgSyncRoiCamera?.(stream);
       resultClock = setInterval(updateResultTime,1000);
       el('videoPanel').classList.add('camera-connected');
       el('cameraBadge').textContent = 'CAM LIVE';

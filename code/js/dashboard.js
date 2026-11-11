@@ -146,8 +146,13 @@ function renderRoi(){
         x=Math.max(0,Math.min(100,x)); y=Math.max(0,Math.min(100,y));
         state.roi[i]={x,y}; renderRoi();
       };
-      const up = ()=>{ document.removeEventListener('pointermove',move); document.removeEventListener('pointerup',up); };
+      const up = ()=>{
+        document.removeEventListener('pointermove',move);
+        document.removeEventListener('pointerup',up);
+        document.removeEventListener('pointercancel',up);
+      };
       document.addEventListener('pointermove',move); document.addEventListener('pointerup',up);
+      document.addEventListener('pointercancel',up);
     });
     svg.appendChild(c);
   });
@@ -168,7 +173,9 @@ function resetRoi(){
 async function saveRoi(){
   const siteId=new URLSearchParams(location.search).get('site');
   try {
-    await dgApi(`/sites/${encodeURIComponent(siteId)}/roi`,{method:'PUT',body:{points:state.roi}});
+    const saved = await dgApi(`/sites/${encodeURIComponent(siteId)}/roi`,{method:'PUT',body:{points:state.roi}});
+    state.roi = saved.points; dgData.roi = saved.points;
+    renderRoi();
     showToast('감시 구역이 저장됐습니다.');
   } catch(error){showToast(error.message);}
 }

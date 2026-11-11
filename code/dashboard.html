@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/common.css">
-<link rel="stylesheet" href="css/dashboard.css?v=side-analysis-1">
+<link rel="stylesheet" href="css/dashboard.css?v=live-roi-1">
 <style>body{overflow:hidden; height:100vh;}</style>
 </head>
 <body>
@@ -98,6 +98,7 @@
             <form id="cameraForm" class="sim-controls">
               <button class="btn primary" id="cameraConnectBtn" type="submit">카메라 연결 · AI 분석</button>
               <button class="btn" id="cameraDisconnectBtn" type="button" disabled>연결 해제</button>
+              <button class="btn" id="cameraRoiBtn" type="button" onclick="switchView('settings')" disabled>영상 보며 ROI 설정</button>
             </form>
             <p id="cameraStatus" role="status"></p>
           </details>
@@ -196,14 +197,17 @@
       <div class="card">
         <h3>감시 구역(ROI) 설정 <span class="tag">FR-SUR-002</span></h3>
         <div class="roi-editor" id="roiEditor">
+          <video id="roiCameraFeed" autoplay muted playsinline hidden aria-label="ROI 설정용 실시간 카메라 영상"></video>
           <svg id="roiSvgEdit" viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute; inset:0; width:100%; height:100%;">
             <polygon id="roiPolyEdit" points="" fill="rgba(45,217,196,0.08)" stroke="var(--teal)" stroke-width="0.5"/>
           </svg>
         </div>
+        <p id="roiCameraStatus" role="status">카메라를 연결하면 실제 영상을 보며 정점을 드래그할 수 있습니다.</p>
         <div class="sim-controls">
           <button class="btn" onclick="addRoiPoint()">+ 정점 추가</button>
           <button class="btn" onclick="resetRoi()">초기화</button>
           <button class="btn" onclick="saveRoi()">감시 구역 저장 (관리자)</button>
+          <button class="btn" onclick="switchView('control')">관제로 돌아가기</button>
         </div>
 
         <div class="field" style="margin-top:18px;">
@@ -250,6 +254,6 @@
 </div>
 
 <script src="js/auth.js?v=camera-unified-4"></script>
-<script src="js/bootstrap.js?v=camera-unified-4" data-scripts="js/dashboard.js?v=camera-unified-4,js/analysis-layout.js?v=1,js/camera.js?v=side-analysis-1,js/edge-camera.js?v=side-analysis-1"></script>
+<script src="js/bootstrap.js?v=camera-unified-4" data-scripts="js/dashboard.js?v=live-roi-1,js/analysis-layout.js?v=1,js/roi-camera.js?v=1,js/camera.js?v=live-roi-1,js/edge-camera.js?v=side-analysis-1"></script>
 </body>
 </html>
