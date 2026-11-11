@@ -4,10 +4,14 @@
   const site = new URLSearchParams(location.search).get('site');
   let generation = 0, timer, poseExpiryTimer, request, running = false;
   const canvas = el('edgePreview');
+  function showPreview(visible){
+    canvas.hidden = !visible;
+    el('edgeResultPanel').hidden = !visible;
+  }
   const labels = {SWIMMING:'수영', DROWNING:'익수 의심', UNCLEAR:'판단 보류'};
   function stop(){
     ++generation; running = false; clearTimeout(timer); clearTimeout(poseExpiryTimer); request?.abort();
-    canvas.hidden = true; el('edgeDetails').textContent = ''; el('edgePoseDetails').textContent = '';
+    showPreview(false); el('edgeDetails').textContent = ''; el('edgePoseDetails').textContent = '';
     el('edgeConnectBtn').disabled = false; el('edgeDisconnectBtn').disabled = true;
     el('edgeCameraId').disabled = false; el('edgeSource').disabled = false;
     el('cameraConnectBtn').disabled = false;
@@ -50,7 +54,7 @@
       const time = analysis?.captured_at ? Date.parse(analysis.captured_at) : NaN;
       const age = (Date.now()-time)/1000;
       const fresh = Number.isFinite(age) && age >= -0.5 && age <= 30 && !packet.expired;
-      canvas.hidden = true;
+      showPreview(false);
       el('edgeStatus').textContent = fresh ? '로컬 AI 결과 수신 중 · 출동 명령 미발행'
         : '분석 결과가 없거나 촬영 시각이 오래되었습니다.';
       const score = Number.isFinite(analysis?.drowning_score) ? (analysis.drowning_score*100).toFixed(1)+'%' : '미제공';
@@ -78,12 +82,12 @@
             ctx.strokeRect(x1,y1,x2-x1,y2-y1);
           }
         }
-        canvas.hidden = false;
+        showPreview(true);
       }
     }catch(error){
       if(run !== generation) return;
       clearTimeout(poseExpiryTimer);
-      canvas.hidden = true; el('edgeDetails').textContent = ''; el('edgePoseDetails').textContent = '';
+      showPreview(false); el('edgeDetails').textContent = ''; el('edgePoseDetails').textContent = '';
       el('edgeStatus').textContent = '로컬 AI 수신 실패: ' + error.message;
       if(!dgGetSession()){stop(); el('edgeStatus').textContent = '세션이 만료되었습니다. 다시 로그인하세요.'; return;}
     }finally{
