@@ -1,5 +1,21 @@
 # 로컬 AI → 배포 관제 웹 연결
 
+## 운영 반영 확인 (2026-11-11)
+
+- 운영 주소: https://drown-guardian.vercel.app
+- 웹 수신·조회 API와 `edge-camera.js`, 관제 화면을 운영에 반영했습니다.
+- `DG_EDGE_INGEST_KEY`, `DG_EDGE_SITE_ID=chunjeon`, `DG_EDGE_CAMERA_ID=camera-01`을
+  Vercel Production에 설정했습니다. 수신 키 값은 이 문서와 프런트엔드에 포함하지 않습니다.
+  AI PC의 `WEB_BACKEND_TOKEN`에는 해당 키를 별도로 안전하게 전달해 설정해야 합니다.
+- 출동과 무관한 `INTEGRATION_TEST` / `UNCLEAR` 관측으로 실제 수신·DB 조회·중복 방지를
+  확인했습니다. 촬영 시각이 없는 테스트 관측이므로 실시간 결과로 표시하지 않습니다.
+- **Modal edge API도 실제로 존재합니다.** `/v1/edge/{camera}`와 분석 이미지 경로를
+  운영 OpenAPI에서 확인했습니다. 확인한 사이트 `chunjeon`, 카메라 `camera-01`,
+  소유자 ID `1` 조합의 조회는 `404 / No local camera telemetry`였습니다.
+  이는 해당 조합에 보관 중인 데이터가 없다는 뜻이며 API 미배포를 의미하지 않습니다.
+  다른 소유자·사이트·카메라로 송신 중인지는 이 결과만으로 판단할 수 없습니다.
+- 실제 PC의 시간 동기화·중계 성공 및 실제 카메라 데이터 표시는 아직 검증하지 않았습니다.
+
 이 변경은 웹 수신·조회·화면 기능입니다. 기존 Modal 브라우저 카메라 경로와
 외부 AI 결과를 합쳐 15프레임을 다시 집계하지 않습니다. 외부 결과 수신만으로
 익수 확정·출동 명령을 생성하지 않습니다.

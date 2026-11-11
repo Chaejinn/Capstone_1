@@ -31,3 +31,17 @@ class VisionDiagnosticTests(unittest.IsolatedAsyncioTestCase):
         data = await self.call(200, {'analysis':None})
         self.assertEqual(data['proxy_timing']['auth_site_ms'],123.4)
         self.assertGreaterEqual(data['proxy_timing']['tracking_roundtrip_ms'],0)
+
+    async def test_edge_no_data_is_distinguished_from_missing_route(self):
+        original = httpx.AsyncClient
+        for detail, expected in [('No local camera telemetry', 'WEB_OPERATOR_ID'),
+                                  ('Source frame expired or unavailable', '만료'),
+                                  ('private remote traceback', 'HTTP 404')]:
+            transport = httpx.MockTransport(lambda request: httpx.Response(404, json={'detail':detail}))
+            with patch.dict('os.environ', {'VISION_SERVICE_URL':'https://vision.example','VISION_SERVICE_API_KEY':'test-key'}), \
+                 patch.object(vision.httpx, 'AsyncClient', side_effect=lambda **kwargs: original(transport=transport, **kwargs)):
+                with self.assertRaises(HTTPException) as caught:
+                    await vision.forward('/v1/edge/camera-01', 'GET', ('owner','site',{'auth_site_ms':1}))
+            self.assertEqual(caught.exception.status_code,404)
+            self.assertIn(expected,caught.exception.detail)
+            self.assertNotIn('private remote traceback',caught.exception.detail)
