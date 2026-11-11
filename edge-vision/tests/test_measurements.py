@@ -3,6 +3,7 @@ import io
 import json
 from pathlib import Path
 import sys
+import subprocess
 import tempfile
 import time
 import unittest
@@ -112,6 +113,27 @@ class MeasurementTests(unittest.TestCase):
         self.assertNotIn(secret,str(caught.exception))
         with self.assertRaises(ValueError):PoseClient('https://user:password@example.test')
         with self.assertRaises(ValueError):PoseClient('http://example.test')
+
+    def test_video_launcher_produces_measured_packets_without_camera_or_network(self):
+        video=self.folder/'marker.avi'
+        writer=cv2.VideoWriter(str(video),cv2.VideoWriter_fourcc(*'MJPG'),30,(640,720))
+        self.assertTrue(writer.isOpened())
+        for _ in range(60):writer.write(self.image)
+        writer.release()
+        config={'camera':{'camera_index':0,'width':640,'height':720,'fps':30},
+            'homography_config':str(self.path),'aruco_config':str(self.marker_path),
+            'pose':{'use_homography':True,'heading_mode':'world'}}
+        config_path=self.folder/'vision.yaml';config_path.write_text(yaml.safe_dump(config))
+        env=self.folder/'.env';env.write_text('WEB_SITE_ID=synthetic-test\n')
+        result=subprocess.run([sys.executable,str(ROOT/'run.py'),'publish-pose','--config',str(config_path),
+            '--video',str(video),'--env-file',str(env),'--dry-run','--max-frames','2','--interval','0.5'],
+            cwd=self.folder,capture_output=True,text=True,timeout=15)
+        self.assertEqual(result.returncode,0,result.stderr)
+        packets=[json.loads(line) for line in result.stdout.splitlines()]
+        self.assertEqual([p['sequence'] for p in packets],[1,2])
+        self.assertGreater(packets[1]['pose']['frame_id'],packets[0]['pose']['frame_id'])
+        self.assertTrue(all(p['pose']['tracking_valid'] for p in packets))
+        self.assertTrue(all(p['pose']['unit']=='m' for p in packets))
 
 
 if __name__=='__main__':unittest.main()
