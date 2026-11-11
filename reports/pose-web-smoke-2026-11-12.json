@@ -1,0 +1,19 @@
+{
+  "health_http": 200,
+  "region_header": "icn1::sin1::5kgl7-1794414549233-0b63778b5edb",
+  "new_routes": "pose GET/POST and time GET present",
+  "assets": "dashboard, camera-ai alias and pose viewer HTTP 200",
+  "anonymous_pose_access_http": 401,
+  "server_time": "2026-11-11T16:29:12.055146+00:00",
+  "pose_smoke_test": {
+    "ingest_http": 200,
+    "readback_http": 200,
+    "idempotent": true,
+    "tracking_valid": false,
+    "command_issued": false,
+    "note": "No physical coordinates or measured heading were fabricated"
+  },
+  "rescue_events_unchanged": true,
+  "deployment_id": "dpl_9ZXyT8VJJg4GiF7b1qxqZzXJTZV9",
+  "git_commit": "6721072df86721cf3600b43d826eda6c3404e257"
+}

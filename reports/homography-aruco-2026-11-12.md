@@ -38,7 +38,7 @@
 
 - 카메라 전용 가상환경에 의존성 설치: OpenCV 5.0.0, NumPy 2.5.4, Pillow 12.3.0,
   PyYAML 6.0.3, python-dotenv 1.2.4 (macOS arm64, Python 3.14).
-- 도구 측정·저장·HTTP 오류 테스트 7개 통과.
+- 도구 측정·저장·HTTP 오류·실제 동영상 입력 CLI 테스트 8개 통과.
 - 웹 위치 수신·클라이언트 계약 테스트 6개 통과.
 - 기존 통합 서버 7개, AI 결과 수신 6개, 오류 진단 4개 테스트 통과.
 - 기존 카메라 및 edge 화면 JS 테스트 2개 묶음 통과 (모의 DOM, 실제 브라우저 시각 검증 아님).
@@ -46,6 +46,20 @@
 
 실제 카메라 영상, GUI의 마우스 조작, 현재 수조의 실측 정확도, Windows 장치,
 보트 출동·복귀·완료는 아직 검증하지 않았습니다.
+
+## Git 및 운영 검증
+
+- 기능 커밋: `2c85055` / 폴더 안내·원격 병합 후 웹 배포 기준 커밋: `6721072`.
+- `origin`(Chaejinn/Capstone_1), `drownguardian`(DrownGuardian/Web-Platform)의
+  원격 README 변경을 병합한 뒤 양쪽 `main`에 정상 푸시했습니다. 강제 푸시는 사용하지 않았습니다.
+- GitHub 푸시로 Vercel 자동 배포 `dpl_9ZXyT8VJJg4GiF7b1qxqZzXJTZV9`가 READY,
+  싱가포르 `sin1`로 완료됐습니다.
+- 운영 `/api/edge/pose` GET/POST, `/api/edge/time`, 기존 AI·카메라 경로와 화면 파일을 확인했습니다.
+- 실제 좌표·헤딩을 넣지 않은 `not_calibrated` 관측으로 수신 200, 인증 조회 200,
+  중복 방지, `command_issued:false`, 기존 구조 이벤트 불변을 확인했습니다.
+- 송신기의 `--check-web` 점검 결과: 서버−이 Mac 시각 추정 +0.029초,
+  왕복 0.158초, 추정 불확실성 ±0.079초. 다른 PC나 실제 카메라의 결과는 아닙니다.
+- 상세 HTTP 검증 결과: `reports/pose-web-smoke-2026-11-12.json`.
 
 ## 다음 순서
 
