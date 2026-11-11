@@ -28,6 +28,18 @@ class TestSignal(Base):
     created_at = Column(DateTime, default=now_utc, nullable=False)
 
 
+class EdgeJudgement(Base):
+    """Durable external AI observations; never a boat command or rescue event."""
+    __tablename__ = "edge_judgements"
+
+    id = Column(Integer, primary_key=True)
+    event_key = Column(String(64), unique=True, nullable=False)
+    site_id = Column(String(30), ForeignKey("sites.id"), index=True, nullable=False)
+    camera_id = Column(String(80), nullable=False)
+    payload_json = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=now_utc, index=True, nullable=False)
+
+
 class User(Base):
     """운영자/관리자 계정. FR-SEC-004(제안) — 관제 대시보드 인증·권한 분리."""
     __tablename__ = "users"
