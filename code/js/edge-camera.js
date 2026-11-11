@@ -54,7 +54,7 @@
       const time = analysis?.captured_at ? Date.parse(analysis.captured_at) : NaN;
       const age = (Date.now()-time)/1000;
       const fresh = Number.isFinite(age) && age >= -0.5 && age <= 30 && !packet.expired;
-      showPreview(false);
+      if(source !== 'hybrid' || !fresh || !Number.isInteger(analysis?.frame_id)) showPreview(false);
       el('edgeStatus').textContent = fresh ? '로컬 AI 결과 수신 중 · 출동 명령 미발행'
         : '분석 결과가 없거나 촬영 시각이 오래되었습니다.';
       const score = Number.isFinite(analysis?.drowning_score) ? (analysis.drowning_score*100).toFixed(1)+'%' : '미제공';

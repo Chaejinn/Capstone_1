@@ -8,6 +8,9 @@
   function update(){
     scheduled = false;
     const panel = panels.find(item => !item.hidden);
+    // Remove the previous offset before measuring, so shrinking a window or
+    // collapsing controls cannot preserve an obsolete, larger grid row.
+    board.style.marginTop = '';
     const available = Math.max(0, column.getBoundingClientRect().height - board.getBoundingClientRect().height - gap);
     board.style.marginTop = panel && available > 0 ? `${available + gap}px` : '';
     for(const item of panels){
