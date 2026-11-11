@@ -1,0 +1,13 @@
+# FR-DET-002 tracking and the FR-JDG-001 -> FR-JDG-002 hand-off.
+# N-frame accumulation / thresholds (FR-JDG-003/004) live in vision*.yaml `stabilization`.
+bytetrack:
+  track_thresh: 0.5
+  match_thresh: 0.8
+  track_buffer: 30
+tracking:
+  min_detections_before_classify: 10
+moondream:
+  classification_mode: POSTURE_CLASSIFICATION_MODE
+  # Empty means: read weights/moondream/model.json (local Moondream2 + LoRA adapter).
+  model_id: ""
+  device: "auto"

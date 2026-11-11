@@ -13,3 +13,7 @@ public/
 local-model/
 /.local-signal-test/
 /SIGNAL_TEST.md
+edge-vision/.venv/
+edge-vision/outputs/
+edge-vision/calibration/*.bak
+edge-vision/calibration/*.tmp

@@ -1,0 +1,55 @@
+# Development defaults. Confirm marker hardware, calibration and web contracts on site.
+pipeline_config: pipeline_config.yaml
+rescue_config: rescue_config.yaml
+detector_weights: weights/rfdetr/checkpoint_best_total.pth # Relative to project root.
+detector:
+  # CPU ONNX keeps the 4 GB GPU for Moondream2 only. On the GPU, RF-DETR waited behind
+  # each VLM call (37 ms -> 2.6-8.3 s per frame while a dummy was in view, 2026-11-05).
+  backend: onnx
+  model_path: outputs/onnx-stage2/rfdetr_fp32.onnx
+  provider: CPUExecutionProvider
+camera:
+  camera_index: 0
+  width: 1280
+  height: 720
+  fps: 30
+pose_hz: 15
+pose_timeout_seconds: 0.08
+pose_max_age_seconds: 0.25
+max_observation_age_seconds: 30
+outbox: ../outputs/rescue/web-state.sqlite3
+web:
+  simulation: true
+  contract_confirmed: false
+  key_env: RESCUE_EVENT_API_KEY
+  timeout_seconds: 1
+web_sync: # Homography info and the drowning-target route. Endpoints are not agreed with the web yet.
+  enabled: false
+  contract_confirmed: false # TODO 협의 필요: set true only after the web owner confirms paths and ack.
+  key_env: WEB_BACKEND_TOKEN
+  url_env: {homography: WEB_HOMOGRAPHY_URL, target_route: WEB_ROUTE_URL}
+  timeout_seconds: 3
+  route_timeout_seconds: 1
+  outbox: ../outputs/rescue/web-sync.sqlite3
+calibration_api_config: calibration_api.yaml # /calib web calibration (--calib-api).
+route_planner_config: route_planner.yaml # Boat-to-drowning-target route. Separate from homography and ArUco.
+homography_config: ../calibration/homography.yaml # Water plane only (no ArUco keys).
+aruco_config: aruco.yaml # Marker only (no homography keys). Combined only in src/aruco/board.py.
+pose:
+  use_homography: true # false: pixel position/heading only, x/y metres null.
+  heading_mode: world # world (projected bow vector, unchanged) | pixel.
+  max_frame_age_seconds: 0.2
+  tracking_timeout_seconds: 0.5
+guidance: # Target bearing / heading error (computed and logged here; the web decides dispatch).
+  board_max_age_seconds: 0.5 # TODO 협의 필요: older board pose -> no guidance value.
+  target_max_age_seconds: 2.0 # TODO 협의 필요: older drowning coordinate -> no guidance / no pose target.
+dispatch_updates: # Re-send the dispatch target's state when it moved or time passed (other tracks: change-only).
+  resend_distance_m: 0.05 # TODO 협의 필요
+  resend_interval_seconds: 1.0 # TODO 협의 필요
+stabilization:
+  minimum_observations: 3
+  confirmation_duration_seconds: 2
+  drowning_vote_ratio: 0.6
+  event_cooldown_seconds: 10
+  tracking_timeout_seconds: 15
+  window_size: 5

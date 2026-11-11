@@ -1,0 +1,13 @@
+# Homography (water plane) settings. Independent of configs/aruco.yaml: neither reads the other.
+# Write points with:  python scripts/homography_check.py calibrate
+# Origin = pool lower-left corner, +X = pool right, +Y = pool up (far side in top view), metres.
+frame_id: "pool-01" # TODO 협의 필요: coordinate_frame name agreed with the web (e.g. pool-01).
+calibration_id: "873f80d5-31ca-43a3-bc23-534cbf98017e" # Set by the calibration tool; change after any camera movement.
+pool_width_m: 0.30 # Measured 30 cm (user, 2026-11-04). X axis.
+pool_height_m: 0.45 # Measured 45 cm. Y axis.
+image_size: [1280, 720] # [width, height] of the calibration image; must equal the camera resolution.
+image_points: [[195, 134], [102, 508], [1182, 527], [1199, 288]] # 4 pixels clicked in order: physical upper-left, upper-right, lower-right, lower-left.
+matrix_file: homography_matrix.json # Matrix cache, relative to this file.
+check_points: [] # Independent verification points: [{pixel: [u, v], world: [x_m, y_m]}]
+max_error_m: 0.05 # Pass limit for calibration residual and check points (5 cm).
+bbox_anchor: [0.5, 1.0] # Bottom centre of the person bbox -> water-plane coordinate.

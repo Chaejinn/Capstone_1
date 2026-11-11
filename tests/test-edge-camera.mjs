@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
 
-async function scenario({source='deployed', expired=false, mismatch=false, error=false, deferred=false}={}){
-  const elements=new Map(), calls=[], timers=new Map(); let pending;
+async function scenario({source='deployed', expired=false, mismatch=false, error=false, deferred=false, poseOnly=false, stalePose=false}={}){
+  const elements=new Map(), calls=[], timers=new Map(), pending=[]; let nextTimer=0;
   function el(id){
     if(!elements.has(id)) elements.set(id,{value:'',disabled:false,hidden:true,textContent:'',handlers:{},
       addEventListener(type,fn){this.handlers[type]=fn;},click(){this.handlers.click?.();},
@@ -17,17 +17,20 @@ async function scenario({source='deployed', expired=false, mismatch=false, error
     window:{addEventListener(){}},URLSearchParams,AbortController,Date,Number,
     pauseSim(){},updateSimControls(){},dgGetSession:()=>({token:'user-token'}),
     Image:class{naturalWidth=640;naturalHeight=480;async decode(){}},
-    setTimeout(fn,delay){const id=timers.size+1;timers.set(id,{fn,delay});return id;},clearTimeout(id){timers.delete(id);},
+    setTimeout(fn,delay){const id=++nextTimer;timers.set(id,{fn,delay});return id;},clearTimeout(id){timers.delete(id);},
     dgApi:async(path,options)=>{
       calls.push({path,options});
       if(error)throw new Error('HTTP 404');
-      if(deferred)return await new Promise(resolve=>{pending=resolve;});
+      if(deferred)return await new Promise(resolve=>{pending.push(resolve);});
+      if(path.startsWith('/edge/pose'))return {pose:{timestamp:new Date(Date.now()-(stalePose?1000:50)).toISOString(),
+        x:.15,y:.2,heading:90,unit:'m',tracking_valid:!stalePose,status:stalePose?'stale_frame':'tracked'}};
+      if(poseOnly)throw new Error('No judgement');
       if(path.includes('/frames/'))return {frame_id:mismatch?2:1,session_id:'session',captured_at,image_base64:'jpeg'};
       return source==='deployed'?{observation,expired}:{analysis:observation,session_id:'session'};
     }});
   vm.runInContext(readFileSync('code/js/edge-camera.js','utf8'),context);
   el('edgeConnectBtn').click();for(let i=0;i<30;i++)await Promise.resolve();
-  return {el,calls,timers,context,resolve:()=>pending?.({observation})};
+  return {el,calls,timers,context,resolve:()=>pending.forEach(resolve=>resolve({observation}))};
 }
 const direct=await scenario();
 assert.match(direct.calls[0].path,/^\/edge\/latest\?site_id=chunjeon&camera_id=camera-01$/);
@@ -55,4 +58,13 @@ const disconnected=await scenario({deferred:true});disconnected.el('edgeDisconne
 disconnected.resolve();for(let i=0;i<20;i++)await Promise.resolve();
 assert.equal(disconnected.el('edgeStatus').textContent,'로컬 AI 결과 수신 종료');
 assert.equal(disconnected.timers.size,0);
+const poseOnly=await scenario({poseOnly:true});
+assert.match(poseOnly.el('edgePoseDetails').textContent,/X 0.150 m/);
+assert.match(poseOnly.el('edgeDetails').textContent,/PC/);
+const expiry=[...poseOnly.timers.values()].find(timer=>timer.delay<=250);
+assert.ok(expiry);expiry.fn();
+assert.match(poseOnly.el('edgePoseDetails').textContent,/관측 만료/);
+const stalePose=await scenario({stalePose:true});
+assert.match(stalePose.el('edgePoseDetails').textContent,/사용 불가/);
+assert.doesNotMatch(stalePose.el('edgePoseDetails').textContent,/X 0.150/);
 console.log('Edge viewer: route selection, stale frames, score semantics, frame matching, errors and cancellation passed');

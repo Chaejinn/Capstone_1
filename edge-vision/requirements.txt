@@ -1,0 +1,6 @@
+# Keep these on the camera PC; Vercel's web requirements are separate.
+opencv-contrib-python>=4.8,<6
+numpy>=1.26,<3
+PyYAML>=6,<7
+Pillow>=10,<13
+python-dotenv>=1,<2

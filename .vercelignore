@@ -13,3 +13,5 @@ tests
 **/__pycache__
 .env*
 SIGNAL_TEST.md
+edge-vision
+local-model

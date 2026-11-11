@@ -1,0 +1,32 @@
+# Optional: pass --rescue-config configs/rescue_config.yaml. All paths relative to this file.
+camera_id: camera-01 # Set the installed camera's identifier.
+drowning_state_code: null # TODO: confirm state=1 with the receiver before setting 1.
+max_observation_age_seconds: 30
+board_max_age_seconds: 5
+arrival_radius_m: 0.2
+matrix_cache: ../outputs/rescue/homography.json
+outbox: ../outputs/rescue/events.sqlite3
+board_telemetry_file: null # Atomic JSON file written by a sensor/server adapter; see docs.
+delivery:
+  simulation: true
+  contract_confirmed: false
+  timeout_seconds: 3
+  max_attempts: 4
+  backoff_seconds: 1
+calibration: # Used ONLY by browser_vision.yaml (Modal browser service). vision*.yaml use ../calibration/homography.yaml.
+  pool_width_m: 0.30 # Measured 30 cm (user, 2026-11-04). Top-view camera.
+  pool_height_m: 0.45 # Measured 45 cm. Corner clicks (rescue.tools click) still required.
+  roi: null # Optional ordered convex image-pixel polygon.
+  exclude_outside_roi: true
+  calibration_id: null # Change after camera movement / recalibration.
+  frame_id: null # Must equal board telemetry frame_id.
+  unit: m
+  origin: null # Describe measured origin.
+  x_axis: null # Describe positive X direction.
+  y_axis: null # Describe positive Y direction.
+  image_size: null # [width, height] at calibration resolution.
+  world_bounds: null # [xmin, ymin, xmax, ymax] in meters.
+  image_points: [] # Ordered pairs; world_points[i] is the SAME point in meters.
+  world_points: []
+  bbox_anchor: [0.5, 1.0] # Bottom center; [0.5,0.5] = center.
+  max_error_m: 0.05

@@ -40,6 +40,18 @@ class EdgeJudgement(Base):
     created_at = Column(DateTime, default=now_utc, index=True, nullable=False)
 
 
+class EdgePose(Base):
+    """One latest observation per configured camera, independent of boat control."""
+    __tablename__ = "edge_poses"
+    scope_key = Column(String(64), primary_key=True)
+    site_id = Column(String(30), ForeignKey("sites.id"), nullable=False)
+    camera_id = Column(String(80), nullable=False)
+    session_id = Column(String(36), nullable=False)
+    sequence = Column(Integer, nullable=False)
+    payload_json = Column(Text, nullable=False)
+    updated_at = Column(DateTime, default=now_utc, nullable=False)
+
+
 class User(Base):
     """운영자/관리자 계정. FR-SEC-004(제안) — 관제 대시보드 인증·권한 분리."""
     __tablename__ = "users"

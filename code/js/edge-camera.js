@@ -2,12 +2,12 @@
 (() => {
   const el = id => document.getElementById(id);
   const site = new URLSearchParams(location.search).get('site');
-  let generation = 0, timer, request, running = false;
+  let generation = 0, timer, poseExpiryTimer, request, running = false;
   const canvas = el('edgePreview');
   const labels = {SWIMMING:'수영', DROWNING:'익수 의심', UNCLEAR:'판단 보류'};
   function stop(){
-    ++generation; running = false; clearTimeout(timer); request?.abort();
-    canvas.hidden = true; el('edgeDetails').textContent = '';
+    ++generation; running = false; clearTimeout(timer); clearTimeout(poseExpiryTimer); request?.abort();
+    canvas.hidden = true; el('edgeDetails').textContent = ''; el('edgePoseDetails').textContent = '';
     el('edgeConnectBtn').disabled = false; el('edgeDisconnectBtn').disabled = true;
     el('edgeCameraId').disabled = false; el('edgeSource').disabled = false;
     el('cameraConnectBtn').disabled = false;
@@ -20,10 +20,32 @@
     const timeout = setTimeout(() => request.abort(), 10000);
     try{
       const query = '?site_id=' + encodeURIComponent(site);
-      const packet = await dgApi(source === 'hybrid'
-        ? '/vision/edge/' + encodeURIComponent(camera) + query
-        : '/edge/latest' + query + '&camera_id=' + encodeURIComponent(camera), {signal:request.signal});
+      let packet, board;
+      if(source === 'hybrid'){
+        packet = await dgApi('/vision/edge/' + encodeURIComponent(camera) + query, {signal:request.signal});
+        board = packet.pose;
+      }else{
+        const suffix = query + '&camera_id=' + encodeURIComponent(camera);
+        const [analysisResult, poseResult] = await Promise.allSettled([
+          dgApi('/edge/latest' + suffix, {signal:request.signal}),
+          dgApi('/edge/pose' + suffix, {signal:request.signal})
+        ]);
+        if(analysisResult.status === 'rejected' && poseResult.status === 'rejected') throw analysisResult.reason;
+        packet = analysisResult.status === 'fulfilled' ? analysisResult.value : {observation:null};
+        board = poseResult.status === 'fulfilled' ? poseResult.value.pose : null;
+      }
       if(run !== generation) return;
+      clearTimeout(poseExpiryTimer);
+      const poseAge = board?.timestamp ? (Date.now()-Date.parse(board.timestamp))/1000 : NaN;
+      const validPose = board?.tracking_valid === true && board.unit === 'm'
+        && Number.isFinite(poseAge) && poseAge >= 0 && poseAge <= 0.25
+        && [board.x,board.y,board.heading].every(Number.isFinite);
+      el('edgePoseDetails').textContent = validPose
+        ? `보드 관측 · X ${board.x.toFixed(3)} m · Y ${board.y.toFixed(3)} m · 방향 ${board.heading.toFixed(1)}° · 출동 명령 미발행`
+        : board ? `보드 위치 사용 불가 · ${board.status || '관측 만료'} · 출동 명령 미발행` : '보드 위치 관측 대기';
+      if(validPose) poseExpiryTimer = setTimeout(() => {
+        if(run === generation && running) el('edgePoseDetails').textContent = '보드 위치 사용 불가 · 관측 만료 · 출동 명령 미발행';
+      }, Math.max(0,250-poseAge*1000));
       const analysis = source === 'hybrid' ? packet.analysis : packet.observation;
       const time = analysis?.captured_at ? Date.parse(analysis.captured_at) : NaN;
       const age = (Date.now()-time)/1000;
@@ -60,7 +82,8 @@
       }
     }catch(error){
       if(run !== generation) return;
-      canvas.hidden = true; el('edgeDetails').textContent = '';
+      clearTimeout(poseExpiryTimer);
+      canvas.hidden = true; el('edgeDetails').textContent = ''; el('edgePoseDetails').textContent = '';
       el('edgeStatus').textContent = '로컬 AI 수신 실패: ' + error.message;
       if(!dgGetSession()){stop(); el('edgeStatus').textContent = '세션이 만료되었습니다. 다시 로그인하세요.'; return;}
     }finally{

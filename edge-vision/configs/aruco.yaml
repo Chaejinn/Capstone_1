@@ -1,0 +1,19 @@
+# ArUco board marker settings. Independent of calibration/homography.yaml: neither reads the other.
+# heading_offset_deg is applied exactly ONCE, in the pose module (src/aruco/board.py).
+# Heading convention: 0 deg = pool +X (right), counter-clockwise positive, origin = pool lower-left.
+# Each profile keeps its own values; measuring tools write only the profile they are given.
+dictionary: DICT_4X4_50
+profile: standin # Active profile: standin (printed boat photo on paper) | boat (real boat).
+profiles:
+  standin: # Paper print of the boat photo, used to set up the marker before the real boat.
+    marker_length_m: 0.05 # Printed black-square side; change if printed at another size.
+    board_marker_id: 0
+    heading_offset_deg: null # null = not measured. The 45 deg previously here had no marker measurement behind it.
+    missing_offset: warn # warn: run with an explicit 0 offset and a loud warning | reject: refuse to start.
+    session: null # Written by calibrate_heading_from_images.py --write (measured_at, camera_resolution, image_session, method).
+  boat: # Real boat; set up separately later.
+    marker_length_m: 0.10
+    board_marker_id: 0 # TODO 협의 필요: actual board marker ID unknown (user, 2026-11-04).
+    heading_offset_deg: null # Not measured yet.
+    missing_offset: reject # Real boat: never start with an unmeasured offset.
+    session: null

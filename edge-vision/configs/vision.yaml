@@ -1,0 +1,13 @@
+# Standalone measurement tools. No RF-DETR, Moondream, navigation or boat commands.
+camera:
+  camera_index: 0
+  width: 1280
+  height: 720
+  fps: 30
+homography_config: ../calibration/homography.yaml
+aruco_config: aruco.yaml
+pose:
+  use_homography: true
+  heading_mode: world
+  max_frame_age_seconds: 0.2
+  tracking_timeout_seconds: 0.5

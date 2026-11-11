@@ -1,0 +1,12 @@
+# Uncalibrated template. Physical measurements must be made on the actual camera.
+# Handoff points/matrix are retained under reference/calibration and are NOT used.
+frame_id: pool-01
+calibration_id: null
+pool_width_m: 0.30
+pool_height_m: 0.45
+image_size: [1280, 720]
+image_points: []
+matrix_file: homography_matrix.json
+check_points: []
+max_error_m: 0.05
+bbox_anchor: [0.5, 1.0]
