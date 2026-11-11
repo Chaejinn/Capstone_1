@@ -1,49 +1,45 @@
-# Drown Guardian · 관제 플랫폼 
+# Drown Guardian · 관제 플랫폼
 
-캡스톤디자인 「Drown Guardian」,
-관제 플랫폼 프론트엔드입니다.
+캡스톤디자인 「Drown Guardian」의 웹 관제 플랫폼과 카메라 PC 측정 도구입니다.
 
-## 폴더 구조 (분야별 코드 분리)
+## 폴더 구조
 
-```
-drown-guardian-platform/
-├── index.html            운영자 · 게스트 로그인
-├── admin-login.html       관리자 전용 로그인
-├── site-select.html       사이트 선택
-├── dashboard.html         관제 대시보드 (시뮬레이션)
-├── admin.html             관리자 패널
-├── css/
-│   ├── common.css         공통 토큰 · 상단바 · 사이드바 · 버튼 등
-│   ├── login.css          로그인 · 사이트 선택 화면
-│   ├── dashboard.css      관제 대시보드 전용 스타일
-│   └── admin.css          관리자 패널 전용 스타일
-└── js/
-    ├── auth.js             세션 · 계정 · 사이트 · 설정 · 감사로그 공통 저장소
-    ├── login.js             운영자/게스트 로그인 로직
-    ├── admin-login.js       관리자 로그인 로직
-    ├── site-select.js       사이트 선택 로직
-    ├── dashboard.js         관제 시뮬레이션 로직 (감지→판단→개입)
-    └── admin.js              관리자 패널 로직 (계정/사이트/설정/로그)
-```
+| 경로 | 역할 |
+| --- | --- |
+| `code/` | 로그인·사이트 선택·관리자·관제 화면과 JS/CSS |
+| `backend/platform/` | 사용자 인증, 사이트, AI 결과·보드 관측 수신, DB 저장 |
+| `backend/app/` | 통합 FastAPI 진입점, 좌표·판정·보트 연결 모듈 |
+| `app.py`, `vercel.json` | 로컬·Vercel 웹 실행 진입점과 배포 설정 |
+| `edge-vision/` | 호모그래피·ArUco 보정·측정·웹 위치 관측 송신 도구 |
+| `scripts/` | 웹 빌드와 기존 모델 연결 보조 도구 |
+| `tests/`, `reports/` | 웹 테스트와 작업·검증 기록 |
+| `patches/` | 별도 AI 저장소에 적용했던 변경 패치 |
 
-- 관리자 로그인 페이지(`admin-login.html`)는 일반 로그인 화면(`index.html`)에
-  **링크로 노출되지 않습니다.** 가입하지 않은 방문자·게스트는 이 페이지의 존재를
-  UI 상에서 알 수 없고, 설령 URL로 직접 접근하거나 `admin.html`을 열더라도
-  `js/auth.js`의 `dgRequireRole(['admin'])` 가드에 의해 실제 관리자 계정으로
-  로그인하지 않으면 즉시 로그인 페이지로 리다이렉트됩니다.
-- 관리자 패널의 **계정 관리**에서 새 운영자 계정을 추가하면,
-  즉시 `index.html`에서 그 계정으로 로그인할 수 있습니다.
+`backend(org)/`, `dist/`, `code.zip`은 이전 자료로 남아 있습니다.
+현재 웹 진입점은 `app.py`이며 프런트엔드는 `code/`입니다.
+가상환경, 비밀키, 로컬 모델 파일과 실행 중 생성물은 Git에 포함하지 않습니다.
 
-## 코드 수정 포인트
+## 웹 실행과 배포
 
-- **디자인 토큰(색상/폰트)**: `css/common.css` 상단 `:root` 변수
-- **시뮬레이션 속도/로직**: `js/dashboard.js`의 `tick()` 함수
-- **판정 임계값 기본값**: 관리자 패널(`admin.html` → 설정) 또는 `js/auth.js`의 `dgSeed()`
-- **사이트 목록**: `js/auth.js`의 `dgSeed()` 내 `DG.KEYS.sites` 초기값, 또는 관리자 패널에서 직접 추가
+웹 의존성은 루트 `requirements.txt`를 사용합니다.
+설치·환경변수·배포 방법은 [DEPLOYMENT.md](DEPLOYMENT.md)를 참고하세요.
+운영 웹은 https://drown-guardian.vercel.app 입니다.
+사용자 인증과 권한 검증은 서버 API에서 수행합니다.
 
-## 참고
+브라우저 카메라의 AI 분석은 Vercel 인증 프록시를 통해 별도 Modal 추적·추론 서비스에 연결됩니다.
+로컬 PC에서 별도로 측정·분석한 결과는 [EDGE_INTEGRATION.md](EDGE_INTEGRATION.md)의
+외부 관측 수신 경로를 사용합니다. 웹 정적 파일만 배포해서 AI 모델이 실행되지는 않습니다.
 
-- 본 프로젝트는 SRS의 FR/NFR 요구사항 ID를 UI 곳곳에 태그로 표기하여
-  문서와 화면을 상호 대조할 수 있게 했습니다.
-- 로그인·권한 분리는 프론트엔드 시연용이며, 실제 서비스에서는 반드시
-  서버 측 인증(해시된 비밀번호, 세션/토큰, HTTPS 등)으로 대체해야 합니다.
+## 호모그래피·ArUco 도구
+
+전달받은 도구는 [edge-vision/README.md](edge-vision/README.md)에 정리했습니다.
+웹 서버와 별도 가상환경을 사용하며, 실제 카메라 보정과 헤딩 측정을 먼저 진행해야 합니다.
+합성 영상 검증과 실제 수조·하드웨어 검증의 범위는
+[인수·개발 결과](reports/homography-aruco-2026-11-12.md)에 구분했습니다.
+
+## 실제 출동 상태
+
+화면 시뮬레이션, AI 관측 수신, 실제 보트 제어는 별도 경로입니다.
+외부 위치 관측 수신만으로 익수 확정이나 출동 명령을 발행하지 않습니다.
+실물 브릿지·현장 보정·익수 판정 성립 후 3초 내 명령 발행 검증은
+[BOAT_BRIDGE.md](BOAT_BRIDGE.md), [MODEL_STREAM.md](MODEL_STREAM.md)를 참고하세요.
