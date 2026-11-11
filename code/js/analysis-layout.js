@@ -23,7 +23,7 @@
   }
   const sizes = new ResizeObserver(schedule);
   sizes.observe(column);sizes.observe(board);
-  const visibility = new MutationObserver(schedule);
+  const visibility = new MutationObserver(update);
   panels.forEach(panel => visibility.observe(panel,{attributes:true,attributeFilter:['hidden']}));
   window.addEventListener('resize',schedule);
   schedule();
