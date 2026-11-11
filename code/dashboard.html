@@ -108,6 +108,19 @@
             <p id="cameraStatus" role="status"></p>
           </details>
 
+          <details class="camera-settings">
+            <summary>로컬 PC의 AI 결과 연결</summary>
+            <div class="sim-controls">
+              <label>수신 경로 <select id="edgeSource"><option value="hybrid">Modal 중계</option><option value="deployed">웹 직접 수신</option></select></label>
+              <label>카메라 ID <input id="edgeCameraId" value="camera-01" maxlength="80" size="12"></label>
+              <button class="btn" id="edgeConnectBtn" type="button">로컬 AI 결과 보기</button>
+              <button class="btn" id="edgeDisconnectBtn" type="button" disabled>수신 종료</button>
+            </div>
+            <p id="edgeStatus" role="status">PC에서 실행한 AI 결과를 조회합니다.</p>
+            <p id="edgeDetails"></p>
+            <canvas id="edgePreview" hidden style="max-width:100%;height:auto" aria-label="로컬 PC에서 분석한 프레임"></canvas>
+          </details>
+
           <div class="sim-controls">
             <button class="btn primary" id="startBtn" onclick="startSim()">▶ 시뮬레이션 시작</button>
             <button class="btn" id="simEstopBtn" onclick="triggerEstop()">비상정지</button>
@@ -234,6 +247,6 @@
 </div>
 
 <script src="js/auth.js?v=camera-unified-4"></script>
-<script src="js/bootstrap.js?v=camera-unified-4" data-scripts="js/dashboard.js?v=camera-unified-4,js/camera.js?v=live-analysis-split-1"></script>
+<script src="js/bootstrap.js?v=camera-unified-4" data-scripts="js/dashboard.js?v=camera-unified-4,js/camera.js?v=live-analysis-split-1,js/edge-camera.js?v=1"></script>
 </body>
 </html>
