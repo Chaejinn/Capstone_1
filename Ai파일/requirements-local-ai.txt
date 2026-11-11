@@ -1,0 +1,7 @@
+# Install with requirements.txt in a Python 3.10+ virtual environment.
+-r ../requirements.txt
+opencv-python-headless
+onnxruntime
+moondream
+PyYAML
+Pillow

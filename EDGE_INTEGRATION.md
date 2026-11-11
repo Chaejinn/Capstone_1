@@ -2,7 +2,7 @@
 
 ## 2026-11-12: 호모그래피·ArUco 도구 인수
 
-전달받은 ZIP은 [edge-vision/README.md](edge-vision/README.md)에 분리·통합했습니다.
+전달받은 ZIP은 [Ai파일/edge-vision/README.md](Ai파일/edge-vision/README.md)에 분리·통합했습니다.
 `POST /api/edge/pose`, 로그인 조회 `GET /api/edge/pose`, 시각 확인 `GET /api/edge/time`을
 추가했습니다. 기존 직접 수신 키와 사이트·카메라 범위를 그대로 사용하며,
 보드 좌표 수신이 익수 확정이나 출동을 유발하지 않습니다.

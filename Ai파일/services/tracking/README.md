@@ -23,7 +23,7 @@ ArUco는 호모그래피 없이도 마커 ID·영상 좌표·픽셀 헤딩을 �
 
 ## 배포
 
-현재 작업 환경에 기존 `local-model/modal-moondream2-deploy/` 빌드 컨텍스트가 있습니다.
+현재 작업 환경에 기존 `Ai파일/local-model/modal-moondream2-deploy/` 빌드 컨텍스트가 있습니다.
 여기에는 11월 6일에 배포한 `src/flow`, 추론 API 클라이언트와 strict gate 등 CPU 어댑터의
 의존 소스가 있습니다. 이 폴더와 모델 가중치는 Git/Vercel 패키징에서 제외됩니다.
 새로운 PC에서는 해당 기존 소스 리비전을 먼저 준비해야 하며, 최신 AI 저장소의 폴더명만
@@ -32,14 +32,14 @@ ArUco는 호모그래피 없이도 마커 ID·영상 좌표·픽셀 헤딩을 �
 ```sh
 python3 scripts/prepare-tracking.py
 # 기존 Vercel VISION_SERVICE_API_KEY 값을 VISION_INGEST_API_KEY 환경변수로 전달한 환경에서:
-cd local-model/modal-moondream2-deploy
+cd Ai파일/local-model/modal-moondream2-deploy
 ../.venv-modal/bin/python -m modal deploy tracking_app.py
 ```
 
 이 단계는 CPU 추적 서비스 `drown-guardian-web-tracking`만 갱신합니다.
 서비스 키는 기존 값을 재사용하고, 파일·명령줄·로그에 키를 기록하지 않습니다.
 
-Vercel 웹은 별도로 새 설정 UI/API를 배포해야 합니다. 카메라 PC 도구 `edge-vision/`은
+Vercel 웹은 별도로 새 설정 UI/API를 배포해야 합니다. 카메라 PC 도구 `Ai파일/edge-vision/`은
 별도 설정 파일을 쓰므로 이 웹 설정을 자동으로 덮어쓰지 않습니다.
 
 ## 검증 범위

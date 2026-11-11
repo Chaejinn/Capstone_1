@@ -10,10 +10,10 @@
 | `backend/platform/` | 사용자 인증, 사이트, AI 결과·보드 관측 수신, DB 저장 |
 | `backend/app/` | 통합 FastAPI 진입점, 좌표·판정·보트 연결 모듈 |
 | `app.py`, `vercel.json` | 로컬·Vercel 웹 실행 진입점과 배포 설정 |
-| `edge-vision/` | 호모그래피·ArUco 보정·측정·웹 위치 관측 송신 도구 |
-| `scripts/` | 웹 빌드와 기존 모델 연결 보조 도구 |
-| `tests/`, `reports/` | 웹 테스트와 작업·검증 기록 |
-| `patches/` | 별도 AI 저장소에 적용했던 변경 패치 |
+| `Ai파일/` | 받은 AI 자료·모델·보정 도구·추적 서비스·패치·검증 기록 |
+| `scripts/` | 웹 빌드와 기존 AI 명령의 호환 진입점 |
+| `tests/`, `Ai파일/reports/` | 웹 테스트와 작업·검증 기록 |
+| `Ai파일/patches/` | 별도 AI 저장소에 적용했던 변경 패치 |
 
 `backend(org)/`, `dist/`, `code.zip`은 이전 자료로 남아 있습니다.
 현재 웹 진입점은 `app.py`이며 프런트엔드는 `code/`입니다.
@@ -32,10 +32,11 @@
 
 ## 호모그래피·ArUco 도구
 
-전달받은 도구는 [edge-vision/README.md](edge-vision/README.md)에 정리했습니다.
+AI 자료 전체 분류는 [Ai파일/README.md](Ai파일/README.md)를 참고하세요.
+전달받은 도구는 [Ai파일/edge-vision/README.md](Ai파일/edge-vision/README.md)에 정리했습니다.
 웹 서버와 별도 가상환경을 사용하며, 실제 카메라 보정과 헤딩 측정을 먼저 진행해야 합니다.
 합성 영상 검증과 실제 수조·하드웨어 검증의 범위는
-[인수·개발 결과](reports/homography-aruco-2026-11-12.md)에 구분했습니다.
+[인수·개발 결과](Ai파일/reports/homography-aruco-2026-11-12.md)에 구분했습니다.
 
 ## 실제 출동 상태
 

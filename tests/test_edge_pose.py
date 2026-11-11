@@ -82,7 +82,7 @@ class PoseReceiverTests(unittest.TestCase):
         self.assertEqual(self.send({**self.body,'sequence':2}).status_code,409)
 
     def test_camera_client_packet_roundtrips_through_real_web_contract(self):
-        root=Path(__file__).resolve().parents[1]/'edge-vision'
+        root=Path(__file__).resolve().parents[1]/'Ai파일/edge-vision'
         sys.path.insert(0,str(root));self.addCleanup(lambda:sys.path.remove(str(root)))
         from src.web.client import PoseClient
         spec=importlib.util.spec_from_file_location('publish_pose_contract',root/'scripts/publish_pose.py')

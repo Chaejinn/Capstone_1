@@ -6,8 +6,8 @@ import sys
 import time
 import unittest
 
-ROOT=Path(__file__).resolve().parents[2]
-sys.path.insert(0,str(ROOT/'local-model/modal-moondream2-deploy'))
+ROOT=Path(__file__).resolve().parents[3]
+sys.path.insert(0,str(ROOT/'Ai파일/local-model/modal-moondream2-deploy'))
 import cv2
 import numpy as np
 from fastapi.testclient import TestClient

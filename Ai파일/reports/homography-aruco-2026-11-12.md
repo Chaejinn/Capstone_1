@@ -1,7 +1,7 @@
 # 호모그래피·ArUco 인수 및 개발 결과
 
 입력: `homography-aruco.zip` (29개 파일, 63,443바이트).
-원본 파일 해시와 ZIP SHA-256은 `edge-vision/handoff-manifest.json`에 기록했습니다.
+원본 파일 해시와 ZIP SHA-256은 `Ai파일/edge-vision/handoff-manifest.json`에 기록했습니다.
 전달 문서의 소스 커밋 `3cb525d`는 문서에 적힌 값이며 별도로 대조한 사실이 아닙니다.
 
 ## 확인 결과
@@ -22,7 +22,7 @@
 
 ## 구성 및 수정
 
-- `edge-vision/`: 도구·설정·진단·웹 송신·테스트를 웹 서버와 분리.
+- `Ai파일/edge-vision/`: 도구·설정·진단·웹 송신·테스트를 웹 서버와 분리.
 - `.vercelignore`: 카메라 PC 코드와 대형 로컬 모델 폴더를 Vercel 패키징에서 제외.
 - 원본의 사용하지 않는 전체 AI 설정은 `reference/configs/`에 보존하고 최소 설정을 사용.
 - 실행용 보정 템플릿은 미보정 상태. 유효하지 않은 원본 행렬을 재사용하지 않음.
@@ -59,11 +59,11 @@
   중복 방지, `command_issued:false`, 기존 구조 이벤트 불변을 확인했습니다.
 - 송신기의 `--check-web` 점검 결과: 서버−이 Mac 시각 추정 +0.029초,
   왕복 0.158초, 추정 불확실성 ±0.079초. 다른 PC나 실제 카메라의 결과는 아닙니다.
-- 상세 HTTP 검증 결과: `reports/pose-web-smoke-2026-11-12.json`.
+- 상세 HTTP 검증 결과: `Ai파일/reports/pose-web-smoke-2026-11-12.json`.
 
 ## 다음 순서
 
-`edge-vision/README.md`의 설치·보정·헤딩 측정 순서대로 실제 카메라를 준비한 뒤
+`Ai파일/edge-vision/README.md`의 설치·보정·헤딩 측정 순서대로 실제 카메라를 준비한 뒤
 `run.py diagnose` → `run.py publish-pose --check-web` → 실제 위치 송신을 확인합니다.
 그 다음 기존 RF-DETR/Moondream 판정 경로와 좌표 기준을 맞추고,
 실물 브릿지가 준비되면 15프레임 확정 이후 3초 내 명령 발행을 검증합니다.

@@ -50,9 +50,9 @@ BF16로 고정된 이미지 전처리는 autocast로 연산 자료형을 맞추�
 
 API 주소가 같아 Vercel 코드·환경변수는 변경하지 않았습니다.
 프레임 접수 제한 2초와 결과 만료 기준도 그대로 유지했습니다.
-모델 원본 저장소에 반영할 패치는 `patches/moondream2-t4-fp16.patch`,
-측정 기록은 `reports/ai-inference-speed-2026-11-06.json`입니다.
-실제 배포본은 `local-model/modal-moondream2-deploy`에 있습니다.
+모델 원본 저장소에 반영할 패치는 `Ai파일/patches/moondream2-t4-fp16.patch`,
+측정 기록은 `Ai파일/reports/ai-inference-speed-2026-11-06.json`입니다.
+실제 배포본은 `Ai파일/local-model/modal-moondream2-deploy`에 있습니다.
 롤백 시 Modal 컨테이너의 `DG_MODEL_PRECISION=bf16` 설정 후 재배포합니다.
 
 ## 실시간 영상과 분석 화면 분리
@@ -143,7 +143,7 @@ Modal의 `drown-guardian-api`에 RF-DETR ONNX와 **Moondream2 + 학습된 LoRA**
 
 - 운영 웹: https://drown-guardian.vercel.app
 - 모델 API: https://kbkr504--drown-guardian-api-fastapi-app.us-east.modal.run
-- Modal 배포 준비본: `local-model/modal-moondream2-deploy` (가중치 포함, Git 제외)
+- Modal 배포 준비본: `Ai파일/local-model/modal-moondream2-deploy` (가중치 포함, Git 제외)
 - Vercel 재배포: `dpl_uZwWBgZDCQ93dP2Ns85fCD3UJMGn`
 
 운영 웹 로그인 후 `/api/camera/analyze`로 샘플 JPEG를 전송해 HTTP 200과
@@ -162,11 +162,11 @@ Modal의 `drown-guardian-api`에 RF-DETR ONNX와 **Moondream2 + 학습된 LoRA**
 `MOONDREAM_API_KEY`가 필요합니다. 완전한 오프라인 추론은 아닙니다.
 
 AI 담당자에게 다음 세 파일과 Moondream 접근 키를 받으세요. ONNX와 manifest는
-같은 export 결과여야 합니다. 모델 코드는 `local-model/Detective-model`에 필요합니다.
+같은 export 결과여야 합니다. 모델 코드는 `Ai파일/local-model/Detective-model`에 필요합니다.
 
-- `local-model/Detective-model/outputs/onnx-stage2/rfdetr_fp32.onnx`
-- `local-model/Detective-model/outputs/onnx-stage2/export_manifest.json`
-- `local-model/Detective-model/weights/moondream/model.json` (`model_id` 포함)
+- `Ai파일/local-model/Detective-model/outputs/onnx-stage2/rfdetr_fp32.onnx`
+- `Ai파일/local-model/Detective-model/outputs/onnx-stage2/export_manifest.json`
+- `Ai파일/local-model/Detective-model/weights/moondream/model.json` (`model_id` 포함)
 
 Python 3.10 이상으로 저장소 루트에서 실행합니다. 기존 `.venv`가 3.9라면
 새 환경을 사용하세요. 키는 저장소나 채팅에 붙여넣지 않습니다.
@@ -237,7 +237,7 @@ python3 -m uvicorn app:app --host 127.0.0.1 --port 8000
 카메라 사용 권한을 허용해야 하며, 감지된 객체의 이미지 프레임은 Modal로 전송됩니다.
 연결 해제·로그아웃·페이지 종료 시 촬영과 추가 분석 요청을 중단합니다.
 
-모델 소스는 `local-model/Detective-model`에 내려받았으며 Git 추적에서 제외됩니다.
+모델 소스는 `Ai파일/local-model/Detective-model`에 내려받았으며 Git 추적에서 제외됩니다.
 Modal 사용 시 로컬 학습 가중치나 Moondream 설치는 필요하지 않습니다.
 
 ## 참고: 별도 로컬 모델 스트림 실행

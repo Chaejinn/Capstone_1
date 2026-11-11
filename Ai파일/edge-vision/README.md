@@ -25,17 +25,17 @@ ZIP의 파일별 원본 해시는 `handoff-manifest.json`에 있습니다.
 macOS/Linux:
 
 ```sh
-python3 -m venv edge-vision/.venv
-edge-vision/.venv/bin/python -m pip install -r edge-vision/requirements.txt
-edge-vision/.venv/bin/python edge-vision/run.py diagnose
+python3 -m venv Ai파일/edge-vision/.venv
+Ai파일/edge-vision/.venv/bin/python -m pip install -r Ai파일/edge-vision/requirements.txt
+Ai파일/edge-vision/.venv/bin/python Ai파일/edge-vision/run.py diagnose
 ```
 
 Windows PowerShell:
 
 ```powershell
-py -3.12 -m venv edge-vision\.venv
-.\edge-vision\.venv\Scripts\python.exe -m pip install -r edge-vision\requirements.txt
-.\edge-vision\.venv\Scripts\python.exe edge-vision\run.py diagnose
+py -3.12 -m venv Ai파일\edge-vision\.venv
+.\Ai파일\edge-vision\.venv\Scripts\python.exe -m pip install -r Ai파일\edge-vision\requirements.txt
+.\Ai파일\edge-vision\.venv\Scripts\python.exe Ai파일\edge-vision\run.py diagnose
 ```
 
 아래 `python`은 위 가상환경의 실행 파일을 의미합니다. `diagnose`는 카메라를 열지 않으며,
@@ -45,14 +45,14 @@ GUI 지원 확인은 창이 실제로 정상 표시됐다는 검증과 다릅니
 ## 실제 카메라 준비 순서
 
 1. 다른 카메라 프로그램과 브라우저 카메라 연결을 종료합니다. 카메라는 한 프로그램만 사용합니다.
-2. `python edge-vision/run.py print-marker`로 PDF/PNG를 생성합니다.
+2. `python Ai파일/edge-vision/run.py print-marker`로 PDF/PNG를 생성합니다.
    A4 실제 크기 100%로 출력하고, 검은 사각형의 변 길이를 자로 재서 `configs/aruco.yaml`에 맞춥니다.
-3. `python edge-vision/run.py calibrate`에서 현재 영상의 실제 수조 좌상→우상→우하→좌하를 지정하고 저장합니다.
+3. `python Ai파일/edge-vision/run.py calibrate`에서 현재 영상의 실제 수조 좌상→우상→우하→좌하를 지정하고 저장합니다.
    수조 크기 0.30×0.45 m는 전달받은 값이므로 현재 수조를 실측해 다르면 수정합니다.
-4. `python edge-vision/run.py marker --world --write`에서 선수를 알려진 방향으로 고정하고
+4. `python Ai파일/edge-vision/run.py marker --world --write`에서 선수를 알려진 방향으로 고정하고
    헤딩 오프셋을 측정·저장합니다. 기본 기대 방향은 +Y=90도입니다.
-5. `python edge-vision/run.py pose`로 여러 방향을 점검하고, 독립 검증점을 보정 편집기에 기록합니다.
-6. `python edge-vision/run.py diagnose`를 다시 실행합니다. 실제 촬영·측정 없이는 준비 완료로 바꾸지 않습니다.
+5. `python Ai파일/edge-vision/run.py pose`로 여러 방향을 점검하고, 독립 검증점을 보정 편집기에 기록합니다.
+6. `python Ai파일/edge-vision/run.py diagnose`를 다시 실행합니다. 실제 촬영·측정 없이는 준비 완료로 바꾸지 않습니다.
 
 카메라 선택은 `--camera-index 1`, 편집기에 동영상 입력은 `--video sample.mp4`입니다.
 원본 ZIP 보정점은 뒤집힌 순서로 진단되어 실행용 기본값에서 제거했습니다. 임의의 사각형이나
@@ -68,8 +68,8 @@ Git에 포함되지 않는 `.env.edge-handoff`의 설정을 사용합니다. 다
 별도 `.env` 파일에 저장하세요. 키를 README나 프런트엔드에 복사하지 않습니다.
 
 ```sh
-python edge-vision/run.py publish-pose --env-file .env.edge-handoff --check-web
-python edge-vision/run.py publish-pose --env-file .env.edge-handoff
+python Ai파일/edge-vision/run.py publish-pose --env-file .env.edge-handoff --check-web
+python Ai파일/edge-vision/run.py publish-pose --env-file .env.edge-handoff
 ```
 
 `--check-web`은 서버 시각과 왕복 시간을 조회하며 카메라나 POST를 사용하지 않습니다.
@@ -99,7 +99,7 @@ AI 익수 판정은 기존 Modal 경로를 유지합니다. 이 ZIP에는 RF-DET
 ## 검증
 
 ```sh
-python -m unittest discover -s edge-vision/tests -v
+python -m unittest discover -s Ai파일/edge-vision/tests -v
 ```
 
 합성 영상에서 마커 ID·미터 좌표·헤딩, 중복 마커, 프레임 만료, 보정 저장/재로드,

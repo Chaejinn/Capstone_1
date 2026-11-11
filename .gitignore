@@ -13,7 +13,9 @@ public/
 local-model/
 /.local-signal-test/
 /SIGNAL_TEST.md
-edge-vision/.venv/
-edge-vision/outputs/
-edge-vision/calibration/*.bak
-edge-vision/calibration/*.tmp
+Ai파일/local-model/
+Ai파일/받은원본/
+Ai파일/edge-vision/.venv/
+Ai파일/edge-vision/outputs/
+Ai파일/edge-vision/calibration/*.bak
+Ai파일/edge-vision/calibration/*.tmp
