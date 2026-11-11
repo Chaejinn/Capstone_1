@@ -97,6 +97,24 @@ async def results(stream_id: UUID, identity=Depends(scope)):
     return JSONResponse(data, headers={'Cache-Control': 'no-store'})
 
 
+@router.get('/edge/{camera_id}')
+async def edge_latest(camera_id: str, identity=Depends(scope)):
+    from fastapi.responses import JSONResponse
+    if not re.fullmatch(r'[A-Za-z0-9_-]{1,80}', camera_id):
+        raise HTTPException(422, '카메라 ID가 올바르지 않습니다.')
+    data = await forward(f'/v1/edge/{camera_id}', 'GET', identity)
+    return JSONResponse(data, headers={'Cache-Control': 'no-store'})
+
+
+@router.get('/edge/{camera_id}/frames/{frame_id}')
+async def edge_frame(camera_id: str, frame_id: int, session_id: UUID, identity=Depends(scope)):
+    from fastapi.responses import JSONResponse
+    if not re.fullmatch(r'[A-Za-z0-9_-]{1,80}', camera_id) or frame_id < 1:
+        raise HTTPException(422, '카메라 또는 프레임 ID가 올바르지 않습니다.')
+    data = await forward(f'/v1/edge/{camera_id}/frames/{frame_id}?session_id={session_id}', 'GET', identity)
+    return JSONResponse(data, headers={'Cache-Control': 'no-store'})
+
+
 @router.delete('/streams/{stream_id}')
 async def close(stream_id: UUID, identity=Depends(scope)):
     return await forward(f'/v1/streams/{stream_id}', 'DELETE', identity)
