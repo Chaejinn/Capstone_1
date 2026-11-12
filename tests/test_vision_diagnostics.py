@@ -34,7 +34,7 @@ class VisionDiagnosticTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_edge_no_data_is_distinguished_from_missing_route(self):
         original = httpx.AsyncClient
-        for detail, expected in [('No local camera telemetry', 'WEB_OPERATOR_ID'),
+        for detail, expected in [('No local camera telemetry', 'PC 분석 결과'),
                                   ('Source frame expired or unavailable', '만료'),
                                   ('private remote traceback', 'HTTP 404')]:
             transport = httpx.MockTransport(lambda request: httpx.Response(404, json={'detail':detail}))

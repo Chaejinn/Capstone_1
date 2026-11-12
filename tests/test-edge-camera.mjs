@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
 
-async function scenario({source='deployed', expired=false, mismatch=false, error=false, deferred=false, poseOnly=false, stalePose=false}={}){
+async function scenario({source='deployed', expired=false, mismatch=false, error=false, deferred=false, poseOnly=false, stalePose=false, missing=false}={}){
   const elements=new Map(), calls=[], timers=new Map(), pending=[]; let nextTimer=0;
   function el(id){
     if(!elements.has(id)) elements.set(id,{value:'',disabled:false,hidden:true,textContent:'',handlers:{},
@@ -21,6 +21,7 @@ async function scenario({source='deployed', expired=false, mismatch=false, error
     dgApi:async(path,options)=>{
       calls.push({path,options});
       if(error)throw new Error('HTTP 404');
+      if(missing && path.startsWith('/vision/edge/')){const error=new Error('No telemetry');error.status=404;throw error;}
       if(deferred)return await new Promise(resolve=>{pending.push(resolve);});
       if(path.startsWith('/edge/pose'))return {pose:{timestamp:new Date(Date.now()-(stalePose?1000:50)).toISOString(),
         x:.15,y:.2,heading:90,unit:'m',tracking_valid:!stalePose,status:stalePose?'stale_frame':'tracked'}};
@@ -68,3 +69,12 @@ const stalePose=await scenario({stalePose:true});
 assert.match(stalePose.el('edgePoseDetails').textContent,/사용 불가/);
 assert.doesNotMatch(stalePose.el('edgePoseDetails').textContent,/X 0.150/);
 console.log('Edge viewer: route selection, stale frames, score semantics, frame matching, errors and cancellation passed');
+
+const missing=await scenario({source:'hybrid',missing:true});
+assert.equal(missing.el('edgeBrowserConnectBtn').hidden,false);
+assert.match(missing.el('edgeStatus').textContent,/별도 PC.*없습니다/);
+let submitted=0;missing.el('cameraForm').requestSubmit=()=>submitted++;
+missing.el('edgeBrowserConnectBtn').click();
+assert.equal(submitted,1);assert.equal(missing.el('cameraConnectBtn').disabled,false);
+assert.equal(missing.el('edgeBrowserConnectBtn').hidden,true);
+assert.equal(missing.timers.size,0);

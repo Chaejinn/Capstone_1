@@ -24,7 +24,9 @@ async function dgApi(path,options={}){
  if(!response.ok){
   if(response.status===401 && path!=='/auth/login') dgClearSession();
   const detail=data?.detail;
-  if(typeof detail==='string') throw new Error(detail);
+  if(typeof detail==='string'){
+   const error=new Error(detail);error.status=response.status;throw error;
+  }
   if(Array.isArray(detail)){
    const labels={username:'아이디',password:'비밀번호',name:'이름'};
    throw new Error(detail.map(item=>{

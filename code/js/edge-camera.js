@@ -10,6 +10,7 @@
   }
   const labels = {SWIMMING:'수영', DROWNING:'익수 의심', UNCLEAR:'판단 보류'};
   function stop(){
+    el('edgeBrowserConnectBtn').hidden = true;
     ++generation; running = false; clearTimeout(timer); clearTimeout(poseExpiryTimer); request?.abort();
     showPreview(false); el('edgeDetails').textContent = ''; el('edgePoseDetails').textContent = '';
     el('edgeConnectBtn').disabled = false; el('edgeDisconnectBtn').disabled = true;
@@ -39,6 +40,7 @@
         board = poseResult.status === 'fulfilled' ? poseResult.value.pose : null;
       }
       if(run !== generation) return;
+      el('edgeBrowserConnectBtn').hidden = true;
       clearTimeout(poseExpiryTimer);
       const poseAge = board?.timestamp ? (Date.now()-Date.parse(board.timestamp))/1000 : NaN;
       const validPose = board?.tracking_valid === true && board.unit === 'm'
@@ -88,7 +90,11 @@
       if(run !== generation) return;
       clearTimeout(poseExpiryTimer);
       showPreview(false); el('edgeDetails').textContent = ''; el('edgePoseDetails').textContent = '';
-      el('edgeStatus').textContent = '로컬 AI 수신 실패: ' + error.message;
+      const missing = source === 'hybrid' && error.status === 404;
+      el('edgeBrowserConnectBtn').hidden = !missing;
+      el('edgeStatus').textContent = missing
+        ? '별도 PC의 분석 결과가 없습니다. 이 브라우저의 카메라를 사용하려면 아래 버튼을 누르세요.'
+        : '로컬 AI 수신 실패: ' + error.message;
       if(!dgGetSession()){stop(); el('edgeStatus').textContent = '세션이 만료되었습니다. 다시 로그인하세요.'; return;}
     }finally{
       clearTimeout(timeout);
@@ -107,6 +113,10 @@
     el('edgeCameraId').disabled = true; el('edgeSource').disabled = true;
     el('edgeStatus').textContent = '로컬 AI 결과 연결 중…';
     void poll(generation,source,camera);
+  });
+  el('edgeBrowserConnectBtn').addEventListener('click',()=>{
+    stop();
+    el('cameraForm').requestSubmit();
   });
   el('edgeDisconnectBtn').addEventListener('click',stop);
   el('logoutBtn').addEventListener('click',() => {if(running) stop();});
