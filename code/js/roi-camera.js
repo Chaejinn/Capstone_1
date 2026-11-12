@@ -21,7 +21,6 @@
   }
   window.dgSyncRoiCamera = stream => {
     current = stream;
-    el('cameraRoiBtn').disabled = !stream;
     editor.classList.toggle('has-camera',Boolean(stream));
     preview.hidden = !stream;
     if(stream){
