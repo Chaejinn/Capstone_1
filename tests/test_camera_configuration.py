@@ -6,6 +6,7 @@ import test_edge_receiver
 from backend.platform import models
 from backend.platform.deps import require_admin
 from backend.platform.routers import camera_settings, vision
+from backend.platform.camera_configuration import Homography, fit_homography
 
 
 class ConfigurationTests(unittest.TestCase):
@@ -85,6 +86,35 @@ class ConfigurationTests(unittest.TestCase):
             self.assertEqual(result.status_code,200);self.assertIn('/v1/vision/marker',remote.call_args.args)
         self.assertEqual(self.client.post('/api/vision/configuration/inspect'+self.query,
             files={'image':('x',b'x','text/plain')}).status_code,415)
+
+    def test_hundreds_of_points_persist_and_have_per_point_errors(self):
+        self.admin()
+        extra=[{'x':10+i*80/32,'y':10+j*80/32} for i in range(1,32) for j in range(1,32)]
+        body={**self.homography,'image_points':self.homography['image_points']+extra,
+              'world_points':[{'x':0,'y':.8},{'x':.8,'y':.8},{'x':.8,'y':0},{'x':0,'y':0}]
+              +[{'x':(p['x']-10)/100,'y':(90-p['y'])/100} for p in extra]}
+        response=self.put('homography',body)
+        self.assertEqual(response.status_code,200,response.text)
+        self.assertEqual(response.json()['homography_report']['point_count'],965)
+        self.assertEqual(len(response.json()['homography_report']['point_errors_m']),965)
+        self.assertLess(response.json()['homography_report']['max_error_m'],1e-8)
+        loaded=self.get().json();self.assertEqual(len(loaded['homography']['image_points']),965)
+        self.assertEqual(len(loaded['homography']['world_points']),965)
+
+    def test_added_correspondence_changes_fit_and_invalid_pairs_are_rejected(self):
+        import numpy as np
+        self.admin()
+        body={**self.homography,'image_points':self.homography['image_points']+[{'x':50,'y':50}],
+            'world_points':[{'x':0,'y':.8},{'x':.8,'y':.8},{'x':.8,'y':0},{'x':0,'y':0},{'x':.405,'y':.4}]}
+        h=Homography.model_validate(body);matrix,report=fit_homography(h)
+        projected=matrix@np.array([50,50,1]);self.assertGreater(projected[0]/projected[2],.4001)
+        self.assertGreater(report['rms_error_m'],0)
+        self.assertEqual(self.put('homography',body).status_code,200)
+        self.assertEqual(self.put('homography',{**body,'world_points':None}).status_code,422)
+        wrong={**body,'world_points':body['world_points'][:-1]+[{'x':.7,'y':.1}]}
+        self.assertEqual(self.put('homography',wrong).status_code,422)
+        outside={**body,'image_points':body['image_points'][:-1]+[{'x':99,'y':50}]}
+        self.assertEqual(self.put('homography',outside).status_code,422)
 
 
 if __name__=='__main__':unittest.main()

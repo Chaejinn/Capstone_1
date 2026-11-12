@@ -4,22 +4,60 @@
   const site=new URLSearchParams(location.search).get('site');
   const query='?site_id='+encodeURIComponent(site||'');
   const video=el('homographyCameraFeed'), source=el('localCameraFeed'), svg=el('homographySvg');
-  let current=null, points=[], imageSize=null, picking=false, revision=0, ready=false, appliedRevision=null;
+  let current=null, points=[], worldPoints=[], fitReport=null, imageSize=null, picking=false, revision=0, ready=false, appliedRevision=null;
   const admin=dgGetSession()?.role==='admin';
   const number=id=>el(id).value.trim()===''?null:Number(el(id).value);
-  function render(){
+  function worldCoordinates(){
+    const w=number('poolWidth'),h=number('poolHeight');
+    const corners=[{x:0,y:h},{x:w,y:h},{x:w,y:0},{x:0,y:0}];
+    return points.map((_,i)=>i<4?corners[i]:worldPoints[i]||{x:null,y:null});
+  }
+  function invalidateFit(){
+    fitReport=null;
+    el('homographyFitStatus').textContent='기준점이 변경됐습니다. 저장하면 전체 기준점의 오차를 다시 계산합니다.';
+    el('homographyPointsBody').querySelectorAll('[data-fit-error]').forEach(cell=>{cell.textContent='—';});
+  }
+  function renderPointTable(){
+    const tbody=el('homographyPointsBody');tbody.replaceChildren();
+    const world=worldCoordinates();
+    points.forEach((_,i)=>{
+      const row=document.createElement('tr'),label=document.createElement('td');
+      label.textContent=i<4?`${i+1} · ${['좌상','우상','우하','좌하'][i]}`:String(i+1);row.appendChild(label);
+      for(const axis of ['x','y']){
+        const cell=document.createElement('td'),input=document.createElement('input');
+        input.type='number';input.min='0';input.step='0.001';input.value=world[i][axis]??'';input.disabled=!admin||i<4;
+        input.setAttribute('aria-label',`${i+1}번 실제 ${axis.toUpperCase()} 좌표`);
+        input.addEventListener('input',()=>{
+          worldPoints[i]={...(worldPoints[i]||{x:null,y:null}),[axis]:input.value.trim()===''?null:Number(input.value)};
+          invalidateFit();
+        });
+        cell.appendChild(input);row.appendChild(cell);
+      }
+      const error=document.createElement('td');error.setAttribute('data-fit-error','');
+      error.textContent=Number.isFinite(fitReport?.point_errors_m?.[i])?(fitReport.point_errors_m[i]*100).toFixed(3):'—';row.appendChild(error);
+      const action=document.createElement('td');
+      if(i>=4){
+        const remove=document.createElement('button');remove.type='button';remove.className='btn';remove.textContent='삭제';remove.disabled=!admin;
+        remove.addEventListener('click',()=>{points.splice(i,1);worldPoints.splice(i,1);invalidateFit();render();});action.appendChild(remove);
+      }
+      row.appendChild(action);tbody.appendChild(row);
+    });
+  }
+  function render(table=true){
     svg.replaceChildren();
     if(points.length>1){
       const shape=document.createElementNS('http://www.w3.org/2000/svg','polygon');
-      shape.setAttribute('points',points.map(p=>`${p.x},${p.y}`).join(' '));
+      shape.setAttribute('points',points.slice(0,4).map(p=>`${p.x},${p.y}`).join(' '));
       shape.setAttribute('fill','rgba(45,217,196,.12)');shape.setAttribute('stroke','#2dd9c4');shape.setAttribute('stroke-width','.5');svg.appendChild(shape);
     }
     points.forEach((p,i)=>{
       const circle=document.createElementNS('http://www.w3.org/2000/svg','circle');
-      circle.setAttribute('cx',p.x);circle.setAttribute('cy',p.y);circle.setAttribute('r','1.8');circle.setAttribute('fill','#ffd166');
+      circle.setAttribute('cx',p.x);circle.setAttribute('cy',p.y);circle.setAttribute('r','1.8');circle.setAttribute('fill',i<4?'#ffd166':'#2dd9c4');
+      circle.addEventListener('click',event=>event.stopPropagation());
       circle.addEventListener('pointerdown',event=>{
         if(!admin||!current||picking)return;event.preventDefault();event.stopPropagation();
-        const move=e=>{points[i]=position(e);render();};
+        invalidateFit();
+        const move=e=>{points[i]=position(e);render(false);};
         const up=()=>{document.removeEventListener('pointermove',move);document.removeEventListener('pointerup',up);document.removeEventListener('pointercancel',up);};
         document.addEventListener('pointermove',move);document.addEventListener('pointerup',up);document.addEventListener('pointercancel',up);
       });
@@ -27,7 +65,9 @@
       const label=document.createElementNS('http://www.w3.org/2000/svg','text');
       label.setAttribute('x',p.x+2);label.setAttribute('y',Math.max(3,p.y-2));label.setAttribute('fill','#ffd166');label.setAttribute('font-size','3');label.textContent=String(i+1);svg.appendChild(label);
     });
-    el('homographyPointCount').textContent=`${points.length} / 4점${picking?' · 순서대로 클릭하세요':''}`;
+    el('homographyPointCount').textContent=`총 ${points.length}점${points.length>=4?` · 추가 ${points.length-4}점`: ' · 모서리 4점 필요'}${picking?' · 영상에서 클릭하세요':''}`;
+    el('homographyAddBtn').textContent=picking==='extra'?'추가 선택 멈추기':'추가 기준점 계속 찍기';
+    if(table)renderPointTable();
   }
   function position(e){
     const r=svg.getBoundingClientRect();
@@ -45,23 +85,33 @@
   };
   source.addEventListener('loadedmetadata',dimensions);source.addEventListener('resize',dimensions);
   svg.addEventListener('click',e=>{
-    if(!picking||!current||!admin||points.length>=4)return;
-    points.push(position(e));if(points.length===4)picking=false;render();
+    if(!picking||!current||!admin)return;
+    const point=position(e);
+    if(points.some(p=>Math.hypot(p.x-point.x,p.y-point.y)<1e-6))return;
+    points.push(point);worldPoints.push({x:null,y:null});invalidateFit();
+    if(picking==='corners'&&points.length===4)picking=false;render();
   });
   el('homographyPickBtn').addEventListener('click',()=>{
     if(!admin){el('homographyStatus').textContent='설정 변경은 관리자 계정이 필요합니다.';return;}
     if(!current||!source.videoWidth){el('homographyStatus').textContent='먼저 관제 화면에서 카메라를 연결하세요.';return;}
-    points=[];imageSize=[source.videoWidth,source.videoHeight];picking=true;render();
+    points=[];worldPoints=[];imageSize=[source.videoWidth,source.videoHeight];picking='corners';invalidateFit();render();
   });
+  el('homographyAddBtn').addEventListener('click',()=>{
+    if(!admin||!current||!source.videoWidth){el('homographyStatus').textContent='관리자 계정으로 카메라를 연결하세요.';return;}
+    if(points.length<4){el('homographyStatus').textContent='먼저 수조 모서리 4점을 지정하세요.';return;}
+    picking=picking==='extra'?false:'extra';render();
+  });
+  for(const id of ['poolWidth','poolHeight'])el(id).addEventListener('input',()=>{invalidateFit();renderPointTable();});
   function aruco(){return {enabled:el('arucoEnabled').checked,dictionary:el('arucoDictionary').value,
     marker_id:number('arucoId'),marker_size_m:Number(el('arucoSize').value)/100,
     heading_offset_deg:number('arucoOffset'),heading_measured:el('arucoHeadingMeasured').checked};}
   function apply(data,part=null){
     const h=data.homography,a=data.aruco;revision=data.revision;ready=true;
     if(!part||part==='homography'){
-    points=h.image_points;imageSize=h.image_size;
+    points=h.image_points;worldPoints=h.world_points||points.map(()=>({x:null,y:null}));imageSize=h.image_size;fitReport=data.homography_report||null;
     el('homographyEnabled').checked=h.enabled;el('poolWidth').value=h.pool_width_m??'';el('poolHeight').value=h.pool_height_m??'';el('poolFrame').value=h.frame_id;
     el('homographyStatus').textContent=h.enabled?'저장된 호모그래피 설정을 불러왔습니다.':'호모그래피가 꺼져 있습니다.';
+    el('homographyFitStatus').textContent=fitReport?`총 ${fitReport.point_count}점 · 입력 기준점 재투영 RMS ${(fitReport.rms_error_m*100).toFixed(3)} cm · 최대 ${(fitReport.max_error_m*100).toFixed(3)} cm`:'저장하면 전체 기준점의 재투영 오차를 계산합니다.';
     }
     if(!part||part==='aruco'){
     el('arucoEnabled').checked=a.enabled;el('arucoDictionary').value=a.dictionary;el('arucoId').value=a.marker_id;el('arucoSize').value=a.marker_size_m*100;
@@ -88,7 +138,12 @@
        Math.abs((source.videoWidth/source.videoHeight)/(imageSize[0]/imageSize[1])-1)>.01){
       el('homographyStatus').textContent='영상 방향·비율이 바뀌었습니다. 기준점 4개를 다시 지정하세요.';return;
     }
-    void save('homography',{enabled:el('homographyEnabled').checked,image_points:points,image_size:imageSize,
+    const world=worldCoordinates();
+    if(points.length>4&&world.some(p=>!Number.isFinite(p.x)||!Number.isFinite(p.y))){
+      el('homographyStatus').textContent='수조 크기와 모든 추가 기준점의 실제 X·Y 좌표를 입력하세요.';return;
+    }
+    void save('homography',{enabled:el('homographyEnabled').checked,image_points:points,
+      world_points:points.length>4?world:null,image_size:imageSize,
       pool_width_m:number('poolWidth'),pool_height_m:number('poolHeight'),frame_id:el('poolFrame').value.trim()},'homographyStatus',el('homographySaveBtn'));
   });
   el('arucoSaveBtn').addEventListener('click',()=>void save('aruco',aruco(),'arucoStatus',el('arucoSaveBtn')));

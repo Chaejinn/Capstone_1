@@ -8,7 +8,7 @@ import numpy as np
 from fastapi import Depends, HTTPException
 from pydantic import BaseModel, Field
 
-from src.camera_configuration import CameraConfiguration, Aruco, calibration_dict
+from src.camera_configuration import CameraConfiguration, Aruco, calibration_dict, fit_homography
 from src.flow.sensing.coordinates import Calibration
 
 
@@ -16,6 +16,7 @@ class ImageCalibration:
     def __init__(self,settings):
         self.settings=settings
         self.cache={}
+        self.percent_matrix,self.fit_report=fit_homography(settings) if settings.enabled else (None,None)
         original=self.for_size(settings.image_size) if settings.enabled else Calibration({})
         self.config,self.matrix=original.config,original.matrix
 
@@ -23,7 +24,18 @@ class ImageCalibration:
         key=tuple(size)
         if key not in self.cache:
             if len(self.cache)>4:self.cache.clear()
-            self.cache[key]=Calibration(calibration_dict(self.settings,size))
+            config=calibration_dict(self.settings,size)
+            if not config:self.cache[key]=Calibration({})
+            else:
+                # Validate the boundary with the legacy geometry adapter, then use
+                # the exact all-point fit also used by Vercel's error report.
+                base={**config,'image_points':config['image_points'][:4],'world_points':config['world_points'][:4]}
+                value=Calibration(base)
+                if value.matrix is None:raise ValueError('Invalid pool boundary')
+                value.config=config;value.pixels=np.asarray(config['image_points'],dtype=float)
+                value.matrix=self.percent_matrix@np.diag([100/size[0],100/size[1],1])
+                value.errors=np.asarray(self.fit_report['point_errors_m']);value.reason='VALID'
+                self.cache[key]=value
         return self.cache[key]
 
     def point(self,pixel,size):
@@ -111,7 +123,7 @@ def register_routes(app,identity):
             calibration,locator,revision=create_profile(body.configuration.model_dump(mode='json'))
             return {'marker_observation':locator.inspect(image),'image_size':[image.shape[1],image.shape[0]],
                 'configuration_revision':revision,'homography_enabled':calibration.settings.enabled,
-                'command_issued':False}
+                'homography_report':calibration.fit_report,'command_issued':False}
         except (ValueError,cv2.error):raise HTTPException(422,'Invalid camera configuration or image') from None
 
     @app.post('/v1/vision/marker')

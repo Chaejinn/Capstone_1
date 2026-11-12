@@ -231,6 +231,12 @@ body{overflow-x:auto!important}
 .camera-setting-fields label{display:flex;flex-direction:column;gap:6px;font-size:12px;min-width:120px;flex:1;}
 .camera-setting-fields input,.camera-setting-fields select{width:100%;min-width:0;background:var(--panel-2);color:var(--text-1);border:1px solid var(--line);border-radius:4px;padding:8px;font:inherit;color-scheme:dark;}
 .camera-setting-fields input::placeholder{color:var(--text-2);}
+.homography-point-list{max-height:280px;overflow:auto;border:1px solid var(--line);border-radius:4px;}
+.homography-point-list table{width:100%;border-collapse:collapse;font-size:12px;}
+.homography-point-list th,.homography-point-list td{padding:6px;border-bottom:1px solid var(--line);text-align:left;}
+.homography-point-list th{position:sticky;top:0;background:var(--panel-2);z-index:1;}
+.homography-point-list input{width:100%;min-width:60px;background:var(--panel-2);color:var(--text-1);border:1px solid var(--line);padding:6px;border-radius:4px;}
+.homography-point-list input:disabled{opacity:.7;}
 .calibration-camera{position:relative;width:100%;aspect-ratio:var(--homography-aspect,16/9);background:#000;border-radius:6px;overflow:hidden;}
 .calibration-camera video,.calibration-camera svg{position:absolute;inset:0;width:100%;height:100%;}
 .calibration-camera video{object-fit:contain;}

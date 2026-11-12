@@ -52,6 +52,18 @@ class RuntimeTests(unittest.TestCase):
         self.assertTrue(locator.inspect(self.image)['coordinate_valid'])
         self.assertIsNone(locator.inspect(self.image)['heading_deg'])
 
+    def test_more_than_four_points_are_used_with_resized_images(self):
+        settings=self.settings;h=settings['homography']
+        extra=[{'x':20+i*10,'y':20+j*10} for i in range(7) for j in range(7)]
+        h['image_points']+=extra
+        h['world_points']=[{'x':0,'y':.8},{'x':.8,'y':.8},{'x':.8,'y':0},{'x':0,'y':0}]
+        h['world_points'] += [{'x':(p['x']-10)/100,'y':(90-p['y'])/100} for p in extra]
+        calibration,locator,_=create_profile(settings)
+        self.assertEqual(calibration.fit_report['point_count'],53)
+        result=locator.inspect(cv2.resize(self.image,(640,360)))
+        self.assertTrue(result['coordinate_valid']);self.assertAlmostEqual(result['x_m'],.4,delta=.002)
+        self.assertAlmostEqual(result['heading_deg'],105,delta=.1)
+
     def test_full_stream_configuration_marker_render_and_diagnostic(self):
         class Predictor:
             def predict(self,frame):
