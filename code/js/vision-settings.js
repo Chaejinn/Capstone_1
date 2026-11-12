@@ -98,7 +98,7 @@
   });
   el('homographyAddBtn').addEventListener('click',()=>{
     if(!admin||!current||!source.videoWidth){el('homographyStatus').textContent='관리자 계정으로 카메라를 연결하세요.';return;}
-    if(points.length<4){el('homographyStatus').textContent='먼저 수조 모서리 4점을 지정하세요.';return;}
+    if(points.length<4){el('homographyStatus').textContent='호모그래피 기준점은 최소 4개 이상 필요합니다. 먼저 보정 영역의 기준점 4개를 지정하세요.';return;}
     picking=picking==='extra'?false:'extra';render();
   });
   for(const id of ['poolWidth','poolHeight'])el(id).addEventListener('input',()=>{invalidateFit();renderPointTable();});
@@ -140,7 +140,7 @@
     }
     const world=worldCoordinates();
     if(points.length>4&&world.some(p=>!Number.isFinite(p.x)||!Number.isFinite(p.y))){
-      el('homographyStatus').textContent='수조 크기와 모든 추가 기준점의 실제 X·Y 좌표를 입력하세요.';return;
+      el('homographyStatus').textContent='보정 영역 크기와 모든 추가 기준점의 실제 X·Y 좌표를 입력하세요.';return;
     }
     void save('homography',{enabled:el('homographyEnabled').checked,image_points:points,
       world_points:points.length>4?world:null,image_size:imageSize,
