@@ -2,7 +2,7 @@
 (() => {
   const column = document.getElementById('cameraColumn');
   const board = document.getElementById('boardStatusCard');
-  const panels = ['aiResultPanel','edgeResultPanel'].map(id => document.getElementById(id));
+  const panels = ['aiResultPanel'].map(id => document.getElementById(id));
   const gap = 14;
   let scheduled = false;
   function update(){

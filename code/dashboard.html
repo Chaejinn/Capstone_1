@@ -103,20 +103,6 @@
             <p id="cameraConfigurationStatus" role="status"></p>
           </details>
 
-          <details class="camera-settings">
-            <summary>별도 PC에서 실행한 AI 결과 조회</summary>
-            <p class="camera-setting-help">이 브라우저의 카메라를 사용하려면 위의 ‘카메라 연결’을 누르세요. 이 항목은 별도 Python 프로그램에서 전송한 결과를 조회할 때 사용합니다.</p>
-            <div class="sim-controls">
-              <label>수신 경로 <select id="edgeSource"><option value="hybrid">Modal 중계</option><option value="deployed">웹 직접 수신</option></select></label>
-              <label>카메라 ID <input id="edgeCameraId" value="camera-01" maxlength="80" size="12"></label>
-              <button class="btn" id="edgeConnectBtn" type="button">로컬 AI 결과 보기</button>
-              <button class="btn" id="edgeDisconnectBtn" type="button" disabled>수신 종료</button>
-            </div>
-            <p id="edgeStatus" role="status">별도 PC 분석 결과 수신 대기</p>
-            <button class="btn primary" id="edgeBrowserConnectBtn" type="button" hidden>이 브라우저의 카메라 연결</button>
-            <p id="edgeDetails"></p>
-            <p id="edgePoseDetails" role="status"></p>
-          </details>
 
           <div class="sim-controls">
             <button class="btn primary" id="startBtn" onclick="startSim()">▶ 시뮬레이션 시작</button>
@@ -132,10 +118,6 @@
           <div class="ai-result-heading"><b>최근 AI 분석 프레임</b><span id="aiResultInfo" role="status">분석 결과 대기</span></div>
           <p id="aiResultPlaceholder" hidden>AI 분석 결과 대기</p>
           <canvas id="cameraOverlay" hidden aria-label="촬영 시각이 표시된 AI 분석 프레임과 추적 ID"></canvas>
-        </section>
-        <section id="edgeResultPanel" class="ai-result-panel" hidden aria-label="로컬 PC의 AI 분석 결과">
-          <div class="ai-result-heading"><b>로컬 AI 분석 프레임</b></div>
-          <canvas id="edgePreview" hidden aria-label="로컬 PC에서 분석한 프레임"></canvas>
         </section>
         <div class="card board-status-card" id="boardStatusCard">
           <h3>구조보드 상태</h3>
@@ -308,6 +290,6 @@
 </div>
 
 <script src="js/auth.js?v=http-status-1"></script>
-<script src="js/bootstrap.js?v=camera-unified-4" data-scripts="js/dashboard.js?v=live-roi-1,js/analysis-layout.js?v=1,js/roi-camera.js?v=2,js/vision-settings.js?v=aruco-status-2,js/camera.js?v=camera-configuration-1,js/edge-camera.js?v=browser-handoff-1"></script>
+<script src="js/bootstrap.js?v=camera-unified-4" data-scripts="js/dashboard.js?v=live-roi-1,js/analysis-layout.js?v=single-camera-1,js/roi-camera.js?v=2,js/vision-settings.js?v=aruco-status-2,js/camera.js?v=camera-configuration-1"></script>
 </body>
 </html>
