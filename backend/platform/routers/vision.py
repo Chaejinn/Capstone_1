@@ -53,7 +53,7 @@ async def forward(path, method, identity, body=None, content_type=None):
                 except (ValueError, AttributeError):
                     detail = None
                 if detail == 'No local camera telemetry':
-                    message = '로컬 AI 데이터가 아직 없습니다. PC의 중계 실행 상태와 사이트·카메라·WEB_OPERATOR_ID를 확인하세요.'
+                    message = '현재 사용자·사이트·카메라에 해당하는 PC 분석 결과가 수신되지 않았습니다. PC 전송 상태와 연결 식별값을 확인하세요.'
                 elif detail == 'Source frame expired or unavailable':
                     message = '해당 분석 이미지가 만료됐거나 아직 중계되지 않았습니다.'
             if response.status_code == 422:

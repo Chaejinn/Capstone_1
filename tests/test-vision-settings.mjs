@@ -37,6 +37,11 @@ const context=vm.createContext({document:{getElementById:element,createElement:t
   }});
 vm.runInContext(readFileSync('code/js/vision-settings.js','utf8'),context);
 const flush=async()=>{for(let i=0;i<40;i++)await Promise.resolve();};await flush();
+assert.match(element('arucoStatus').textContent,/저장된 설정.*사용 안 함/);
+element('arucoEnabled').checked=true;element('arucoEnabled').handlers.change();
+assert.match(element('arucoStatus').textContent,/미저장.*검출 사용 선택/);
+element('arucoEnabled').checked=false;element('arucoEnabled').handlers.change();
+assert.match(element('arucoStatus').textContent,/저장된 설정.*사용 안 함/);
 const stream={getTracks:()=>[{stop(){stops++;}}]};context.window.dgSyncVisionCamera(stream);
 assert.equal(element('homographyCameraFeed').srcObject,stream);
 element('homographyPickBtn').handlers.click();

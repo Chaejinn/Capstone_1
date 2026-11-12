@@ -102,9 +102,20 @@
     picking=picking==='extra'?false:'extra';render();
   });
   for(const id of ['poolWidth','poolHeight'])el(id).addEventListener('input',()=>{invalidateFit();renderPointTable();});
+  let savedAruco=null;
   function aruco(){return {enabled:el('arucoEnabled').checked,dictionary:el('arucoDictionary').value,
     marker_id:number('arucoId'),marker_size_m:Number(el('arucoSize').value)/100,
     heading_offset_deg:number('arucoOffset'),heading_measured:el('arucoHeadingMeasured').checked};}
+  for(const id of ['arucoEnabled','arucoDictionary','arucoId','arucoSize','arucoOffset','arucoHeadingMeasured']){
+    const update=()=>{
+      if(!ready)return;
+      const changed=JSON.stringify(aruco())!==savedAruco;
+      el('arucoStatus').textContent=changed
+        ? `변경 사항 미저장 · 검출 ${el('arucoEnabled').checked?'사용':'사용 안 함'} 선택. ‘ArUco 저장 · 적용’을 눌러 반영하세요.`
+        : `저장된 설정: ArUco 검출 ${el('arucoEnabled').checked?'사용':'사용 안 함'}.`;
+    };
+    el(id).addEventListener('input',update);el(id).addEventListener('change',update);
+  }
   function apply(data,part=null){
     const h=data.homography,a=data.aruco;revision=data.revision;ready=true;
     if(!part||part==='homography'){
@@ -116,7 +127,8 @@
     if(!part||part==='aruco'){
     el('arucoEnabled').checked=a.enabled;el('arucoDictionary').value=a.dictionary;el('arucoId').value=a.marker_id;el('arucoSize').value=a.marker_size_m*100;
     el('arucoOffset').value=a.heading_offset_deg??'';el('arucoHeadingMeasured').checked=a.heading_measured;
-    el('arucoStatus').textContent=a.enabled?'저장된 ArUco 설정을 불러왔습니다.':'ArUco 검출이 꺼져 있습니다.';
+    savedAruco=JSON.stringify(aruco());
+    el('arucoStatus').textContent=a.enabled?'저장된 설정: ArUco 검출 사용. 현재 영상의 검출 여부는 영상 확인으로 확인하세요.':'저장된 설정: ArUco 검출 사용 안 함.';
     }
     el('cameraConfigurationStatus').textContent=appliedRevision===revision?`카메라 설정 v${revision} · 추적 서버 적용 확인`:`저장된 카메라 설정 v${revision}`;
     render();

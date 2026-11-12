@@ -230,8 +230,8 @@
           <label>마커 한 변 길이(cm)<input id="arucoSize" type="number" value="5" min="0.1" step="0.1"></label>
           <label>보드 방향 보정 각도(도)<input id="arucoOffset" type="number" min="-180" max="180" step="0.1" placeholder="미측정"></label>
         </div>
-        <label class="camera-setting-option"><input id="arucoHeadingMeasured" type="checkbox"> 실제 보드 앞쪽 방향을 기준으로 보정 각도를 측정했습니다.</label>
-        <p class="camera-setting-help">마커 한 변 길이는 흰 여백을 제외한 마커 자체의 길이이며, 보드 길이가 아닙니다. 마커 위쪽을 향하는 방향과 실제 보드 앞쪽 방향의 차이를 보정 각도로 입력하세요. 호모그래피 없이도 마커는 검출되며, 미터 좌표에는 호모그래피가 필요합니다. 방향 각도는 +X=0°이며 반시계 방향으로 증가합니다.</p>
+        <label class="camera-setting-option"><input id="arucoHeadingMeasured" type="checkbox"> 보드 방향 보정 완료</label>
+        <p class="camera-setting-help">마커 한 변 길이는 흰 여백을 제외한 마커 자체의 길이이며, 보드 길이가 아닙니다. 호모그래피 없이도 마커는 검출되며, 미터 좌표에는 호모그래피가 필요합니다. 방향 각도는 +X=0°이며 반시계 방향으로 증가합니다.</p>
         <div class="sim-controls">
           <button class="btn primary" id="arucoSaveBtn" type="button">ArUco 저장 · 적용</button>
           <button class="btn" id="arucoImageBtn" type="button">마커 이미지 만들기</button>
@@ -306,6 +306,6 @@
 </div>
 
 <script src="js/auth.js?v=camera-unified-4"></script>
-<script src="js/bootstrap.js?v=camera-unified-4" data-scripts="js/dashboard.js?v=live-roi-1,js/analysis-layout.js?v=1,js/roi-camera.js?v=2,js/vision-settings.js?v=waterfront-labels-1,js/camera.js?v=camera-configuration-1,js/edge-camera.js?v=side-analysis-1"></script>
+<script src="js/bootstrap.js?v=camera-unified-4" data-scripts="js/dashboard.js?v=live-roi-1,js/analysis-layout.js?v=1,js/roi-camera.js?v=2,js/vision-settings.js?v=aruco-status-2,js/camera.js?v=camera-configuration-1,js/edge-camera.js?v=side-analysis-1"></script>
 </body>
 </html>
