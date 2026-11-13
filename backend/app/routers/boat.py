@@ -17,11 +17,15 @@ class Pose(BaseModel):
 
 
 class BoatControl:
-    def __init__(self):
+    def __init__(self, kp=0.8, ki=0.0, kd=0.15, integral_limit=100.0):
+        if not all(math.isfinite(v) and v>=0 for v in (kp,ki,kd,integral_limit)):
+            raise ValueError("PID gains and integral limit must be finite and nonnegative")
+        self.kp,self.ki,self.kd,self.integral_limit=kp,ki,kd,integral_limit
         self.estop = False
         self.reset()
 
     def reset(self):
+        self.integral = 0.0
         self.previous_error = None
         self.previous_time = None
         self.updated_at = None
@@ -46,12 +50,20 @@ class BoatControl:
         else:
             error = (math.degrees(math.atan2(dy, dx)) - pose.yaw_deg + 180) % 360 - 180
             derivative = 0.0
+            dt = 0.0
             if self.previous_time is not None:
                 dt = now - self.previous_time
                 if 0 < dt <= 1.5:
                     derivative = ((error - self.previous_error + 180) % 360 - 180) / dt
-            # PID with Ki=0: proportional + time-based derivative, bounded rudder.
-            rudder = max(-35.0, min(35.0, 0.8 * error + 0.15 * derivative))
+                else:
+                    self.integral = 0.0
+                    dt = 0.0
+            candidate = max(-self.integral_limit,min(self.integral_limit,self.integral + error*dt))
+            output = self.kp*error + self.ki*candidate + self.kd*derivative
+            # Conditional integration: never accumulate further into a saturated rudder.
+            if abs(output)<=35 or output*error<0:
+                self.integral = candidate
+            rudder = max(-35.0,min(35.0,self.kp*error+self.ki*self.integral+self.kd*derivative))
             self.command = dict(throttle=35, rudder=round(rudder, 2), net=None, estop=False)
             self.previous_error, self.previous_time = error, now
         self.updated_at = now

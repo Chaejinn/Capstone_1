@@ -33,3 +33,15 @@ def test_wrapped_derivative():
     c = BoatControl()
     c.guidance(pose(-179), 1)
     assert c.guidance(pose(179), 1.1)["rudder"] == -35
+
+
+def test_integral_antiwindup_and_stale_reset():
+    c = BoatControl(kp=0, ki=1, kd=0, integral_limit=100)
+    c.guidance(pose(-10), 1)
+    assert c.guidance(pose(-10), 2)["rudder"] == 10
+    c.guidance(pose(-100), 3)
+    assert c.integral == 10  # Saturation must not accumulate error.
+    c.guidance(pose(-10), 5)
+    assert c.integral == 0
+    c.emergency_stop()
+    assert c.integral == 0

@@ -36,6 +36,13 @@ class RuntimeTests(unittest.TestCase):
         self.assertTrue(full['detected']);self.assertTrue(full['coordinate_valid'])
         self.assertAlmostEqual(full['x_m'],.4,delta=.002);self.assertAlmostEqual(full['y_m'],.4,delta=.002)
         self.assertAlmostEqual(full['heading_deg'],105,delta=.1)
+        front,_=calibration.point(full['board_front_px'],[1280,720])
+        import math
+        direction=math.degrees(math.atan2(front['y']-full['y_m'],front['x']-full['x_m']))%360
+        self.assertAlmostEqual(direction,full['heading_deg'],delta=.1)
+        above,_=calibration.point([640,250],[1280,720])
+        below,_=calibration.point([640,470],[1280,720])
+        self.assertGreater(above['y'],below['y'])
         self.assertAlmostEqual(full['x_m'],small['x_m'],delta=.002)
         self.assertAlmostEqual(full['y_m'],small['y_m'],delta=.002)
         self.assertEqual(calibration.point([10,10],[720,1280])[1],'IMAGE_ASPECT_MISMATCH')

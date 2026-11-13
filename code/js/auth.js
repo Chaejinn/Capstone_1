@@ -28,7 +28,7 @@ async function dgApi(path,options={}){
    const error=new Error(detail);error.status=response.status;throw error;
   }
   if(Array.isArray(detail)){
-   const labels={username:'아이디',password:'비밀번호',name:'이름'};
+   const labels={username:'아이디',password:'비밀번호',name:'이름',body:'호모그래피 설정',image_size:'영상 크기',image_points:'영상 기준점',world_points:'실제 기준점 좌표',pool_width_m:'실측 너비',pool_height_m:'실측 세로 길이',frame_id:'좌표계 이름'};
    throw new Error(detail.map(item=>{
     const field=labels[item.loc?.at(-1)]||item.loc?.at(-1)||'입력 값';
     if(item.type==='missing') return `${field}을(를) 입력하세요.`;

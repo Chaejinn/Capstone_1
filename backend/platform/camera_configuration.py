@@ -49,20 +49,20 @@ class Homography(BaseModel):
         for start,edge in zip(p,edges):
             delta=pixels-start
             if np.any(edge[0]*delta[:,1]-edge[1]*delta[:,0]<-1e-7):
-                raise ValueError('추가 기준점은 모서리 4점으로 지정한 수조 안에 있어야 합니다.')
+                raise ValueError('추가 기준점은 모서리 4점으로 지정한 보정 영역 안에 있어야 합니다.')
         if self.enabled and (self.image_size is None or self.pool_width_m is None or self.pool_height_m is None):
-            raise ValueError('영상 크기와 실측 수조 너비·높이가 필요합니다.')
+            raise ValueError('영상 크기와 보정 영역 실측 너비·세로 길이가 필요합니다.')
         if len(pixels)>4 and self.world_points is None:
             raise ValueError('추가 기준점마다 실제 X·Y 좌표를 입력하세요.')
         if self.world_points is not None:
             if self.pool_width_m is None or self.pool_height_m is None:
-                raise ValueError('실제 좌표를 사용하려면 수조 크기가 필요합니다.')
+                raise ValueError('실제 좌표를 사용하려면 보정 영역 크기가 필요합니다.')
             world=np.array([[v.x,v.y] for v in self.world_points])
             if (len(np.unique(world,axis=0))!=len(world) or
                 np.any(world[:,0]>self.pool_width_m+1e-9) or np.any(world[:,1]>self.pool_height_m+1e-9)):
-                raise ValueError('실제 좌표는 중복 없이 수조 범위 안에 있어야 합니다.')
+                raise ValueError('실제 좌표는 중복 없이 보정 영역 범위 안에 있어야 합니다.')
             if not np.allclose(world[:4],pool_corners(self),atol=1e-8,rtol=0):
-                raise ValueError('처음 4점의 실제 좌표는 수조 모서리와 일치해야 합니다.')
+                raise ValueError('처음 4점의 실제 좌표는 보정 영역 모서리와 일치해야 합니다.')
         if self.enabled:
             _,report=fit_homography(self)
             if report['max_error_m']>.05:

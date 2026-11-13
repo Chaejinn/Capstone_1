@@ -79,3 +79,11 @@ await element('arucoInspectBtn').handlers.click();assert.equal(element('arucoIns
 assert.match(element('arucoInspectionStatus').textContent,/마커 ID 3 검출/);
 context.window.dgSyncVisionCamera(null);assert.equal(element('homographyCameraFeed').srcObject,null);assert.equal(stops,0);
 console.log('Camera settings: live stream, unlimited point editing, world coordinates, independent saves, revision and marker inspection passed');
+
+const beforeInvalid=calls.length;
+element('poolWidth').value='0';
+element('homographySaveBtn').handlers.click();await flush();
+assert.equal(calls.length,beforeInvalid,'Invalid physical dimensions are rejected before HTTP 422');
+assert.match(element('homographyStatus').textContent,/0보다 크게/);
+assert.match(element('homographyImageSize').textContent,/1280 × 720 px/);
+assert.match(element('homographyImageSize').textContent,/960 × 540 px/);
