@@ -82,6 +82,12 @@ class MarkerLocator:
         result.update(x_m=float(mean[0]),y_m=float(mean[1]),coordinate_valid=True,coordinate_status='VALID')
         if a.heading_measured and a.heading_offset_deg is not None:
             result['heading_deg']=(math.degrees(math.atan2(forward[1],forward[0]))+a.heading_offset_deg)%360
+            angle=math.radians(result['heading_deg'])
+            front=mean+np.array([math.cos(angle),math.sin(angle)])*np.linalg.norm(forward)
+            pixel=np.linalg.solve(self.calibration.for_size(size).matrix,np.r_[front,1.])
+            if np.isfinite(pixel).all() and abs(pixel[2])>1e-12:
+                result['board_front_px']=(pixel[:2]/pixel[2]).tolist()
+
         return result
 
     def locate(self,frame,now=None):

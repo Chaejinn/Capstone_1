@@ -50,6 +50,21 @@
       shape.setAttribute('points',points.slice(0,4).map(p=>`${p.x},${p.y}`).join(' '));
       shape.setAttribute('fill','rgba(45,217,196,.12)');shape.setAttribute('stroke','#2dd9c4');shape.setAttribute('stroke-width','.5');svg.appendChild(shape);
     }
+    if(points.length>=4){
+      const origin=points[3];
+      for(const [end,name,color] of [[points[2],'+X','#ff827c'],[points[0],'+Y','#65e7ff']]){
+        const line=document.createElementNS('http://www.w3.org/2000/svg','path');
+        const dx=end.x-origin.x,dy=end.y-origin.y,length=Math.hypot(dx,dy);
+        if(length<1e-6)continue;
+        const ux=dx/length,uy=dy/length;
+        line.setAttribute('d',`M ${origin.x} ${origin.y} L ${end.x} ${end.y} M ${end.x-ux*3-uy*1.5} ${end.y-uy*3+ux*1.5} L ${end.x} ${end.y} L ${end.x-ux*3+uy*1.5} ${end.y-uy*3-ux*1.5}`);
+        line.setAttribute('fill','none');line.setAttribute('stroke',color);line.setAttribute('stroke-width','.7');line.setAttribute('pointer-events','none');svg.appendChild(line);
+        const label=document.createElementNS('http://www.w3.org/2000/svg','text');
+        label.setAttribute('x',Math.max(3,Math.min(90,(origin.x+end.x)/2+2)));
+        label.setAttribute('y',Math.max(4,Math.min(96,(origin.y+end.y)/2-2)));
+        label.setAttribute('fill',color);label.setAttribute('font-size','3.5');label.setAttribute('pointer-events','none');label.textContent=name;svg.appendChild(label);
+      }
+    }
     points.forEach((p,i)=>{
       const circle=document.createElementNS('http://www.w3.org/2000/svg','circle');
       circle.setAttribute('cx',p.x);circle.setAttribute('cy',p.y);circle.setAttribute('r','1.8');circle.setAttribute('fill',i<4?'#ffd166':'#2dd9c4');
@@ -63,17 +78,23 @@
       });
       svg.appendChild(circle);
       const label=document.createElementNS('http://www.w3.org/2000/svg','text');
-      label.setAttribute('x',p.x+2);label.setAttribute('y',Math.max(3,p.y-2));label.setAttribute('fill','#ffd166');label.setAttribute('font-size','3');label.textContent=String(i+1);svg.appendChild(label);
+      label.setAttribute('x',p.x+2);label.setAttribute('y',Math.max(3,p.y-2));label.setAttribute('fill','#ffd166');label.setAttribute('font-size','3');label.textContent=i<4?`${i+1} (${worldCoordinates()[i].x??'—'}, ${worldCoordinates()[i].y??'—'}) m`:String(i+1);svg.appendChild(label);
     });
     el('homographyPointCount').textContent=`총 ${points.length}점${points.length>=4?` · 추가 ${points.length-4}점`: ' · 모서리 4점 필요'}${picking?' · 영상에서 클릭하세요':''}`;
     el('homographyAddBtn').textContent=picking==='extra'?'추가 선택 멈추기':'추가 기준점 계속 찍기';
     if(table)renderPointTable();
+    dimensions();
   }
   function position(e){
     const r=svg.getBoundingClientRect();
     return {x:Math.max(0,Math.min(100,(e.clientX-r.left)/r.width*100)),y:Math.max(0,Math.min(100,(e.clientY-r.top)/r.height*100))};
   }
   function dimensions(){
+    const w=source.videoWidth,h=source.videoHeight;
+    const saved=imageSize?`${imageSize[0]} × ${imageSize[1]} px`:'미지정';
+    const upload=w?`${Math.min(960,w)} × ${Math.round(h*Math.min(960,w)/w)} px`:'대기';
+    const mismatch=w&&imageSize&&Math.abs((w/h)/(imageSize[0]/imageSize[1])-1)>.01;
+    el('homographyImageSize').textContent=`현재 영상 ${w?`${w} × ${h} px`:'연결 대기'} · 보정 영상 ${saved} · AI 전송 ${upload}${mismatch?' · 영상 비율 불일치: 기준점을 다시 지정하세요.':''}`;
     if(current&&source.videoWidth&&source.videoHeight){
       el('homographyEditor').style.setProperty('--homography-aspect',`${source.videoWidth}/${source.videoHeight}`);
     }
@@ -101,7 +122,7 @@
     if(points.length<4){el('homographyStatus').textContent='호모그래피 기준점은 최소 4개 이상 필요합니다. 먼저 보정 영역의 기준점 4개를 지정하세요.';return;}
     picking=picking==='extra'?false:'extra';render();
   });
-  for(const id of ['poolWidth','poolHeight'])el(id).addEventListener('input',()=>{invalidateFit();renderPointTable();});
+  for(const id of ['poolWidth','poolHeight'])el(id).addEventListener('input',()=>{invalidateFit();render();});
   let savedAruco=null;
   function aruco(){return {enabled:el('arucoEnabled').checked,dictionary:el('arucoDictionary').value,
     marker_id:number('arucoId'),marker_size_m:Number(el('arucoSize').value)/100,
@@ -150,6 +171,14 @@
        Math.abs((source.videoWidth/source.videoHeight)/(imageSize[0]/imageSize[1])-1)>.01){
       el('homographyStatus').textContent='영상 방향·비율이 바뀌었습니다. 기준점 4개를 다시 지정하세요.';return;
     }
+    if(el('homographyEnabled').checked){
+      if(points.length<4||!imageSize){el('homographyStatus').textContent='기준점은 최소 4개 이상 필요합니다. 영상을 연결하고 기준점을 지정하세요.';return;}
+      if(!(number('poolWidth')>0&&number('poolHeight')>0)){el('homographyStatus').textContent='보정 영역의 실측 너비와 세로 길이를 0보다 크게 입력하세요.';return;}
+      const p=points.slice(0,4);
+      const cross=p.map((a,i)=>{const b=p[(i+1)%4],c=p[(i+2)%4];return (b.x-a.x)*(c.y-b.y)-(b.y-a.y)*(c.x-b.x);});
+      const area=p.reduce((sum,a,i)=>{const b=p[(i+1)%4];return sum+a.x*b.y-b.x*a.y;},0)/2;
+      if(cross.some(v=>v<=1e-6)||area<100){el('homographyStatus').textContent='기준점 순서·면적을 확인하세요: 좌상 → 우상 → 우하 → 좌하, 영상 면적 1% 이상이어야 합니다.';return;}
+    }
     const world=worldCoordinates();
     if(points.length>4&&world.some(p=>!Number.isFinite(p.x)||!Number.isFinite(p.y))){
       el('homographyStatus').textContent='보정 영역 크기와 모든 추가 기준점의 실제 X·Y 좌표를 입력하세요.';return;
@@ -191,6 +220,14 @@
     if(!marker?.detected||!Array.isArray(marker.corners_px)||marker.corners_px.length!==4)return;
     ctx.strokeStyle='#ffd166';ctx.fillStyle='#ffd166';ctx.lineWidth=3;ctx.beginPath();
     marker.corners_px.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));ctx.closePath();ctx.stroke();ctx.font='16px sans-serif';
+    const center=marker.center_px||marker.corners_px.reduce((a,p)=>[a[0]+p[0]/4,a[1]+p[1]/4],[0,0]);
+    const front=marker.board_front_px||[(marker.corners_px[0][0]+marker.corners_px[1][0])/2,(marker.corners_px[0][1]+marker.corners_px[1][1])/2];
+    const dx=front[0]-center[0],dy=front[1]-center[1],angle=Math.atan2(dy,dx),length=Math.max(25,Math.hypot(dx,dy)*1.8);
+    const tip=[center[0]+Math.cos(angle)*length,center[1]+Math.sin(angle)*length];
+    ctx.beginPath();ctx.moveTo(center[0]-Math.cos(angle)*length*.6,center[1]-Math.sin(angle)*length*.6);ctx.lineTo(tip[0],tip[1]);
+    ctx.moveTo(tip[0]-12*Math.cos(angle-.5),tip[1]-12*Math.sin(angle-.5));ctx.lineTo(tip[0],tip[1]);ctx.lineTo(tip[0]-12*Math.cos(angle+.5),tip[1]-12*Math.sin(angle+.5));ctx.stroke();
+    ctx.fillText(marker.board_front_px?'보드 앞':'마커 앞 · 보드 방향 미보정',tip[0]+4,tip[1]);
+    ctx.fillText('뒤',center[0]-Math.cos(angle)*length*.6+4,center[1]-Math.sin(angle)*length*.6);
     const p=marker.corners_px[0];ctx.fillText(`ArUco ID ${marker.marker_id}`,Math.max(0,p[0]),Math.max(18,p[1]-8));
     if(marker.coordinate_valid&&Number.isFinite(marker.x_m)&&Number.isFinite(marker.y_m)){
       const heading=Number.isFinite(marker.heading_deg)?` · 방향 ${marker.heading_deg.toFixed(1)}°`:' · 방향 미측정';
