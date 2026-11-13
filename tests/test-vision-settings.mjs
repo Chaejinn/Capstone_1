@@ -47,6 +47,8 @@ assert.equal(element('homographyCameraFeed').srcObject,stream);
 element('homographyPickBtn').handlers.click();
 for(const [clientX,clientY] of [[80,45],[720,45],[720,405],[80,405]])element('homographySvg').handlers.click({clientX,clientY});
 assert.match(element('homographyPointCount').textContent,/총 4점/);
+assert.ok(element('homographySvg').children.some(node=>node.textContent==='+X'));
+assert.ok(element('homographySvg').children.some(node=>node.textContent==='+Y'));
 element('poolWidth').value='.8';element('poolHeight').value='.8';element('homographyEnabled').checked=true;
 element('arucoId').value='3';
 element('homographySaveBtn').handlers.click();await flush();
