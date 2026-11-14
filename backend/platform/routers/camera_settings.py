@@ -47,6 +47,15 @@ def save(db,identity,part,value,admin):
     return {**current.model_dump(mode='json'),'homography_report':homography_report(current.homography)}
 
 
+@router.post('/configuration/homography/validate')
+def validate_homography(body:Homography,identity=Depends(scope)):
+    # Read-only calculation: never write a configuration or restart a stream.
+    if not body.enabled:
+        raise HTTPException(422,'보정 확인에는 호모그래피 사용 설정과 기준점·영상 크기·실측 크기가 필요합니다.')
+    return {'valid':True,'saved':False,'command_issued':False,
+            'image_size':body.image_size,'homography_report':homography_report(body)}
+
+
 @router.put('/configuration/homography')
 def homography(body:Homography,identity=Depends(scope),admin=Depends(require_admin),db:Session=Depends(get_db)):
     return save(db,identity,'homography',body,admin)

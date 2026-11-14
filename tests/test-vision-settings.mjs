@@ -26,6 +26,8 @@ const context=vm.createContext({document:{getElementById:element,createElement:t
   URLSearchParams,Math,Number,Boolean,Date,Blob,FormData,
   dgApi:async(path,options={})=>{
     calls.push({path,options});
+    if(path.includes('/homography/validate'))return {valid:true,saved:false,command_issued:false,
+      homography_report:{point_count:options.body.image_points.length,rms_error_m:0,max_error_m:0,point_errors_m:options.body.image_points.map(()=>0)}};
     if(options.method==='PUT'){
       const part=path.includes('/homography')?'homography':'aruco';
       settings={...settings,revision:settings.revision+1,[part]:structuredClone(options.body)};
@@ -51,6 +53,10 @@ assert.ok(element('homographySvg').children.some(node=>node.textContent==='+X'))
 assert.ok(element('homographySvg').children.some(node=>node.textContent==='+Y'));
 element('poolWidth').value='.8';element('poolHeight').value='.8';element('homographyEnabled').checked=true;
 element('arucoId').value='3';
+element('homographyValidateBtn').handlers.click();await flush();
+assert.equal(settings.revision,0);assert.equal(restarts,0,'Preview does not restart tracking');
+assert.match(element('homographyStatus').textContent,/아직 저장하지 않았습니다/);
+assert.equal(calls.at(-1).options.method,'POST');
 element('homographySaveBtn').handlers.click();await flush();
 assert.equal(restarts,1);assert.equal(element('arucoId').value,'3','Saving homography preserves unsaved marker inputs');
 const saved=calls.find(call=>call.path.includes('/configuration/homography'));

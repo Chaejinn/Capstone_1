@@ -25,6 +25,24 @@ class ConfigurationTests(unittest.TestCase):
     def get(self):return self.client.get('/api/vision/configuration'+self.query)
     def put(self,part,body):return self.client.put('/api/vision/configuration/'+part+self.query,json=body)
 
+    def test_preview_validates_without_saving_configuration(self):
+        path='/api/vision/configuration/homography/validate'+self.query
+        self.assertEqual(self.client.post(path,json=self.homography).status_code,401)
+        self.edge.authorize_reader()
+        before=self.get().json()
+        response=self.client.post(path,json=self.homography)
+        self.assertEqual(response.status_code,200,response.text)
+        report=response.json()
+        self.assertTrue(report['valid']);self.assertFalse(report['saved']);self.assertFalse(report['command_issued'])
+        self.assertEqual(report['homography_report']['point_count'],4)
+        self.assertLess(report['homography_report']['max_error_m'],1e-8)
+        invalid={**self.homography,'image_size':None}
+        self.assertEqual(self.client.post(path,json=invalid).status_code,422)
+        self.assertEqual(self.client.post(path.replace('site-a','other'),json=self.homography).status_code,403)
+        self.assertEqual(self.get().json(),before)
+        with self.edge.sessions() as db:
+            self.assertEqual(db.query(models.CameraConfiguration).count(),0)
+
     def test_auth_and_separate_write_permission(self):
         self.assertEqual(self.get().status_code,401)
         self.edge.authorize_reader()

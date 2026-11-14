@@ -203,7 +203,7 @@
         </div>
         <p id="homographyFitStatus" class="camera-setting-help" role="status">저장하면 전체 기준점의 재투영 오차를 계산합니다.</p>
         <p class="camera-setting-help">실제 좌표의 원점은 보정 영역 좌하단이며, +X는 오른쪽, +Y는 위쪽입니다. 영상 픽셀 Y는 아래로 증가하지만 실제 Y는 위로 증가합니다. 카메라 위치·방향이 바뀌면 다시 보정하세요.</p>
-        <div class="sim-controls"><button class="btn primary" id="homographySaveBtn" type="button">호모그래피 저장 · 적용</button></div>
+        <div class="sim-controls"><button class="btn" id="homographyValidateBtn" type="button">저장 전 보정 확인</button><button class="btn primary" id="homographySaveBtn" type="button">호모그래피 저장 · 적용</button></div>
         <p id="homographyStatus" class="camera-setting-help" role="status">설정 조회 중…</p>
       </section>
       <section class="card">
@@ -291,6 +291,6 @@
 </div>
 
 <script src="js/auth.js?v=calibration-validation-1"></script>
-<script src="js/bootstrap.js?v=camera-unified-4" data-scripts="js/dashboard.js?v=square-roi-1,js/analysis-layout.js?v=single-camera-1,js/roi-camera.js?v=square-roi-1,js/vision-settings.js?v=axes-heading-1,js/camera.js?v=inference-diagnostics-1"></script>
+<script src="js/bootstrap.js?v=camera-unified-4" data-scripts="js/dashboard.js?v=square-roi-1,js/analysis-layout.js?v=single-camera-1,js/roi-camera.js?v=square-roi-1,js/vision-settings.js?v=homography-preview-1,js/camera.js?v=inference-diagnostics-1"></script>
 </body>
 </html>

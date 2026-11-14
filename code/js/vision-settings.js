@@ -166,12 +166,13 @@
       window.dgRestartCameraTracking?.();
     }catch(error){el(status).textContent=error.message;}finally{button.disabled=!admin;}
   }
-  el('homographySaveBtn').addEventListener('click',()=>{
-    if(el('homographyEnabled').checked&&current&&imageSize&&
+  function homographyBody(forceEnabled=false){
+    const enabled=forceEnabled||el('homographyEnabled').checked;
+    if(enabled&&current&&imageSize&&
        Math.abs((source.videoWidth/source.videoHeight)/(imageSize[0]/imageSize[1])-1)>.01){
       el('homographyStatus').textContent='영상 방향·비율이 바뀌었습니다. 기준점 4개를 다시 지정하세요.';return;
     }
-    if(el('homographyEnabled').checked){
+    if(enabled){
       if(points.length<4||!imageSize){el('homographyStatus').textContent='기준점은 최소 4개 이상 필요합니다. 영상을 연결하고 기준점을 지정하세요.';return;}
       if(!(number('poolWidth')>0&&number('poolHeight')>0)){el('homographyStatus').textContent='보정 영역의 실측 너비와 세로 길이를 0보다 크게 입력하세요.';return;}
       const p=points.slice(0,4);
@@ -183,9 +184,27 @@
     if(points.length>4&&world.some(p=>!Number.isFinite(p.x)||!Number.isFinite(p.y))){
       el('homographyStatus').textContent='보정 영역 크기와 모든 추가 기준점의 실제 X·Y 좌표를 입력하세요.';return;
     }
-    void save('homography',{enabled:el('homographyEnabled').checked,image_points:points,
+    return {enabled,image_points:points,
       world_points:points.length>4?world:null,image_size:imageSize,
-      pool_width_m:number('poolWidth'),pool_height_m:number('poolHeight'),frame_id:el('poolFrame').value.trim()},'homographyStatus',el('homographySaveBtn'));
+      pool_width_m:number('poolWidth'),pool_height_m:number('poolHeight'),frame_id:el('poolFrame').value.trim()};
+  }
+  el('homographySaveBtn').addEventListener('click',()=>{
+    const body=homographyBody();
+    if(body)void save('homography',body,'homographyStatus',el('homographySaveBtn'));
+  });
+  el('homographyValidateBtn').addEventListener('click',async()=>{
+    if(!ready||!admin)return;
+    const body=homographyBody(true);if(!body)return;
+    const snapshot=JSON.stringify(body),button=el('homographyValidateBtn');button.disabled=true;
+    el('homographyStatus').textContent='입력한 기준점과 영상 크기를 확인하고 있습니다.';
+    try{
+      const data=await dgApi('/vision/configuration/homography/validate'+query,{method:'POST',body});
+      if(JSON.stringify(homographyBody(true))!==snapshot){el('homographyStatus').textContent='확인 중 입력이 변경됐습니다. 다시 확인하세요.';return;}
+      fitReport=data.homography_report;render();
+      el('homographyFitStatus').textContent=`총 ${fitReport.point_count}점 · 입력 기준점 재투영 RMS ${(fitReport.rms_error_m*100).toFixed(3)} cm · 최대 ${(fitReport.max_error_m*100).toFixed(3)} cm`;
+      el('homographyStatus').textContent='보정 입력 확인 완료 · 아직 저장하지 않았습니다. 실제 오차는 별도 실측 지점에서 확인하세요.';
+    }catch(error){el('homographyStatus').textContent=error.message;}
+    finally{button.disabled=!admin;}
   });
   el('arucoSaveBtn').addEventListener('click',()=>void save('aruco',aruco(),'arucoStatus',el('arucoSaveBtn')));
   el('arucoImageBtn').addEventListener('click',async()=>{
@@ -234,7 +253,7 @@
       ctx.fillText(`X ${marker.x_m.toFixed(3)} m · Y ${marker.y_m.toFixed(3)} m${heading}`,Math.max(0,p[0]),Math.min((ctx.canvas?.height??100000)-8,p[1]+22));
     }
   };
-  el('homographySaveBtn').disabled=el('arucoSaveBtn').disabled=!admin;
+  el('homographyValidateBtn').disabled=el('homographySaveBtn').disabled=el('arucoSaveBtn').disabled=!admin;
   void dgApi('/vision/configuration'+query).then(apply).catch(error=>{
     el('homographyStatus').textContent=el('arucoStatus').textContent='설정 조회 실패: '+error.message;
   });
