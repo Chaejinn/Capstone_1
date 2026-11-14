@@ -131,7 +131,7 @@ function defaultRoi(){
   const video=document.getElementById('localCameraFeed'),panel=document.getElementById('videoPanel');
   const width=!video.hidden&&video.videoWidth?video.videoWidth:panel.clientWidth||100;
   const height=!video.hidden&&video.videoHeight?video.videoHeight:panel.clientHeight||100;
-  const side=Math.min(width,height)*0.6,dx=side/width*50,dy=side/height*50;
+  const side=Math.min(width,height)*0.88,dx=side/width*50,dy=side/height*50;
   return [{x:50-dx,y:50-dy},{x:50+dx,y:50-dy},{x:50+dx,y:50+dy},{x:50-dx,y:50+dy}];
 }
 window.dgResizeDefaultRoi=()=>{if(state.roiIsDefault)renderRoi();};
