@@ -20,8 +20,12 @@ class ScriptedPredictor:
     def __init__(self):
         self.score = .8
         self.visible = True
+        self.fail_next = False
 
     def predict(self, frame):
+        if self.fail_next:
+            self.fail_next=False
+            raise RuntimeError("scripted inference failure")
         detection = {'class':'human_dummy','confidence':.99,'water_state':'DROWNING',
                      'drowning_score':self.score,'bbox':[100,100,200,300]}
         return {'frame_id':frame.frame_id,'image_size':[640,480],
@@ -64,9 +68,9 @@ class JudgementPipelineTests(unittest.TestCase):
         self.assertEqual(response.status_code,200,response.text)
         for _ in range(200):
             packet = self.client.get(path+'/results',headers=self.headers).json()
-            self.assertIsNone(packet['last_error'],packet)
             analysis = packet.get('analysis')
             if analysis and analysis['frame_id']==frame:
+                self.assertIsNone(packet['last_error'],packet)
                 self.assertFalse(analysis['control_commands_generated'])
                 return analysis['detections']
             time.sleep(.005)
@@ -109,6 +113,20 @@ class JudgementPipelineTests(unittest.TestCase):
         self.assertEqual(self.analyzed(path,17),[])
         self.predictor.visible = True
         self.assertEqual(self.analyzed(path,18)[0]['consecutive_frames'],1)
+
+    def test_inference_failure_clears_previous_evidence(self):
+        path=self.open_stream()
+        for frame in range(1,15):self.analyzed(path,frame)
+        self.predictor.fail_next=True
+        self.assertEqual(self.upload(path,15).status_code,200)
+        for _ in range(200):
+            packet=self.client.get(path+'/results',headers=self.headers).json()
+            if packet['last_error']:break
+            time.sleep(.005)
+        else:self.fail('Scripted failure was not reported')
+        self.assertEqual(packet['last_error'],'RuntimeError')
+        item=self.analyzed(path,16)[0]
+        self.assertEqual(item['consecutive_frames'],1);self.assertFalse(item['confirmed'])
 
     def test_replay_rejected_and_reconnection_starts_from_one(self):
         first = self.open_stream()
