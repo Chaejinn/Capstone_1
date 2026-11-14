@@ -5,6 +5,7 @@
   const query='?site_id='+encodeURIComponent(site||'');
   const video=el('homographyCameraFeed'), source=el('localCameraFeed'), svg=el('homographySvg');
   let current=null, points=[], worldPoints=[], fitReport=null, imageSize=null, picking=false, revision=0, ready=false, appliedRevision=null;
+  let checkPoint=null;
   const admin=dgGetSession()?.role==='admin';
   const number=id=>el(id).value.trim()===''?null:Number(el(id).value);
   function worldCoordinates(){
@@ -13,6 +14,7 @@
     return points.map((_,i)=>i<4?corners[i]:worldPoints[i]||{x:null,y:null});
   }
   function invalidateFit(){
+    el('homographyCheckStatus').textContent='보정값이 변경됐습니다. 검증점의 실측 오차를 다시 확인하세요.';
     fitReport=null;
     el('homographyFitStatus').textContent='기준점이 변경됐습니다. 저장하면 전체 기준점의 오차를 다시 계산합니다.';
     el('homographyPointsBody').querySelectorAll('[data-fit-error]').forEach(cell=>{cell.textContent='—';});
@@ -65,6 +67,11 @@
         label.setAttribute('fill',color);label.setAttribute('font-size','3.5');label.setAttribute('pointer-events','none');label.textContent=name;svg.appendChild(label);
       }
     }
+    if(checkPoint){
+      const mark=document.createElementNS('http://www.w3.org/2000/svg','text');
+      mark.setAttribute('x',checkPoint.x);mark.setAttribute('y',checkPoint.y);mark.setAttribute('fill','#ffffff');
+      mark.setAttribute('font-size','4');mark.setAttribute('pointer-events','none');mark.textContent='＋ 검증점';svg.appendChild(mark);
+    }
     points.forEach((p,i)=>{
       const circle=document.createElementNS('http://www.w3.org/2000/svg','circle');
       circle.setAttribute('cx',p.x);circle.setAttribute('cy',p.y);circle.setAttribute('r','1.8');circle.setAttribute('fill',i<4?'#ffd166':'#2dd9c4');
@@ -108,6 +115,7 @@
   svg.addEventListener('click',e=>{
     if(!picking||!current||!admin)return;
     const point=position(e);
+    if(picking==='check'){checkPoint=point;picking=false;el('homographyCheckStatus').textContent='검증점 선택 완료 · 실제 X·Y 좌표를 입력하세요.';render();return;}
     if(points.some(p=>Math.hypot(p.x-point.x,p.y-point.y)<1e-6))return;
     points.push(point);worldPoints.push({x:null,y:null});invalidateFit();
     if(picking==='corners'&&points.length===4)picking=false;render();
@@ -115,7 +123,7 @@
   el('homographyPickBtn').addEventListener('click',()=>{
     if(!admin){el('homographyStatus').textContent='설정 변경은 관리자 계정이 필요합니다.';return;}
     if(!current||!source.videoWidth){el('homographyStatus').textContent='먼저 관제 화면에서 카메라를 연결하세요.';return;}
-    points=[];worldPoints=[];imageSize=[source.videoWidth,source.videoHeight];picking='corners';invalidateFit();render();
+    points=[];worldPoints=[];checkPoint=null;imageSize=[source.videoWidth,source.videoHeight];picking='corners';invalidateFit();render();
   });
   el('homographyAddBtn').addEventListener('click',()=>{
     if(!admin||!current||!source.videoWidth){el('homographyStatus').textContent='관리자 계정으로 카메라를 연결하세요.';return;}
@@ -206,6 +214,31 @@
     }catch(error){el('homographyStatus').textContent=error.message;}
     finally{button.disabled=!admin;}
   });
+  el('homographyCheckPickBtn').addEventListener('click',()=>{
+    if(!current||!source.videoWidth||!admin){el('homographyCheckStatus').textContent='관리자 계정으로 카메라를 연결하세요.';return;}
+    picking='check';el('homographyCheckStatus').textContent='영상에서 보정에 사용하지 않은 별도 지점을 클릭하세요.';
+  });
+  function checkBody(){
+    const homography=homographyBody(true);if(!homography)return;
+    const x=number('homographyCheckX'),y=number('homographyCheckY');
+    if(!checkPoint||x===null||y===null||!Number.isFinite(x)||!Number.isFinite(y)||x<0||y<0){
+      el('homographyCheckStatus').textContent='영상에서 검증점을 선택하고 0 이상의 실측 X·Y 좌표를 입력하세요.';return;
+    }
+    return {homography,image_point:checkPoint,measured_point:{x,y}};
+  }
+  for(const id of ['homographyCheckX','homographyCheckY'])el(id).addEventListener('input',()=>{
+    el('homographyCheckStatus').textContent='실측 좌표가 변경됐습니다. 오차를 다시 확인하세요.';
+  });
+  el('homographyCheckBtn').addEventListener('click',async()=>{
+    if(!ready||!admin)return;const body=checkBody();if(!body)return;
+    const snapshot=JSON.stringify(body),button=el('homographyCheckBtn');button.disabled=true;
+    try{
+      const result=await dgApi('/vision/configuration/homography/check-point'+query,{method:'POST',body});
+      if(JSON.stringify(checkBody())!==snapshot){el('homographyCheckStatus').textContent='확인 중 입력이 변경됐습니다. 다시 확인하세요.';return;}
+      el('homographyCheckStatus').textContent=`계산 좌표 X ${result.projected_point.x.toFixed(3)} m · Y ${result.projected_point.y.toFixed(3)} m · 실측 오차 ${(result.error_m*100).toFixed(2)} cm · 설정 저장 안 함`;
+    }catch(error){el('homographyCheckStatus').textContent=error.message;}
+    finally{button.disabled=!admin;}
+  });
   el('arucoSaveBtn').addEventListener('click',()=>void save('aruco',aruco(),'arucoStatus',el('arucoSaveBtn')));
   el('arucoImageBtn').addEventListener('click',async()=>{
     const button=el('arucoImageBtn');button.disabled=true;
@@ -253,7 +286,7 @@
       ctx.fillText(`X ${marker.x_m.toFixed(3)} m · Y ${marker.y_m.toFixed(3)} m${heading}`,Math.max(0,p[0]),Math.min((ctx.canvas?.height??100000)-8,p[1]+22));
     }
   };
-  el('homographyValidateBtn').disabled=el('homographySaveBtn').disabled=el('arucoSaveBtn').disabled=!admin;
+  el('homographyCheckBtn').disabled=el('homographyCheckPickBtn').disabled=el('homographyValidateBtn').disabled=el('homographySaveBtn').disabled=el('arucoSaveBtn').disabled=!admin;
   void dgApi('/vision/configuration'+query).then(apply).catch(error=>{
     el('homographyStatus').textContent=el('arucoStatus').textContent='설정 조회 실패: '+error.message;
   });

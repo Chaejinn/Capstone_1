@@ -43,6 +43,24 @@ class ConfigurationTests(unittest.TestCase):
         with self.edge.sessions() as db:
             self.assertEqual(db.query(models.CameraConfiguration).count(),0)
 
+    def test_independent_check_point_projects_and_reports_measured_error(self):
+        path='/api/vision/configuration/homography/check-point'+self.query
+        body={'homography':self.homography,'image_point':{'x':50,'y':50},
+              'measured_point':{'x':.43,'y':.44}}
+        self.assertEqual(self.client.post(path,json=body).status_code,401)
+        self.edge.authorize_reader();before=self.get().json()
+        response=self.client.post(path,json=body)
+        self.assertEqual(response.status_code,200,response.text);result=response.json()
+        self.assertAlmostEqual(result['projected_point']['x'],.4)
+        self.assertAlmostEqual(result['projected_point']['y'],.4)
+        self.assertAlmostEqual(result['error_m'],.05)
+        self.assertFalse(result['saved']);self.assertFalse(result['command_issued'])
+        for point in ({'x':10,'y':10},{'x':2,'y':2}):
+            self.assertEqual(self.client.post(path,json={**body,'image_point':point}).status_code,422)
+        lower=self.client.post(path,json={**body,'image_point':{'x':50,'y':70}}).json()
+        self.assertLess(lower['projected_point']['y'],result['projected_point']['y'])
+        self.assertEqual(self.get().json(),before)
+
     def test_auth_and_separate_write_permission(self):
         self.assertEqual(self.get().status_code,401)
         self.edge.authorize_reader()

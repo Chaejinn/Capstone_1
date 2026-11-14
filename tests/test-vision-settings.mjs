@@ -26,6 +26,7 @@ const context=vm.createContext({document:{getElementById:element,createElement:t
   URLSearchParams,Math,Number,Boolean,Date,Blob,FormData,
   dgApi:async(path,options={})=>{
     calls.push({path,options});
+    if(path.includes('/homography/check-point'))return {projected_point:{x:.4,y:.4},error_m:.05,saved:false,command_issued:false};
     if(path.includes('/homography/validate'))return {valid:true,saved:false,command_issued:false,
       homography_report:{point_count:options.body.image_points.length,rms_error_m:0,max_error_m:0,point_errors_m:options.body.image_points.map(()=>0)}};
     if(options.method==='PUT'){
@@ -57,6 +58,14 @@ element('homographyValidateBtn').handlers.click();await flush();
 assert.equal(settings.revision,0);assert.equal(restarts,0,'Preview does not restart tracking');
 assert.match(element('homographyStatus').textContent,/아직 저장하지 않았습니다/);
 assert.equal(calls.at(-1).options.method,'POST');
+element('homographyCheckPickBtn').handlers.click();
+element('homographySvg').handlers.click({clientX:400,clientY:225});
+assert.match(element('homographyPointCount').textContent,/총 4점/);
+element('homographyCheckX').value='.43';element('homographyCheckY').value='.44';
+element('homographyCheckBtn').handlers.click();await flush();
+assert.match(element('homographyCheckStatus').textContent,/실측 오차 5.00 cm/);
+assert.equal(settings.revision,0);assert.equal(restarts,0);
+
 element('homographySaveBtn').handlers.click();await flush();
 assert.equal(restarts,1);assert.equal(element('arucoId').value,'3','Saving homography preserves unsaved marker inputs');
 const saved=calls.find(call=>call.path.includes('/configuration/homography'));

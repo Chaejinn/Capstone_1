@@ -2,12 +2,15 @@
 import hashlib
 import json
 from uuid import uuid4
+import math
+import numpy as np
+from pydantic import BaseModel, ConfigDict
 from fastapi import APIRouter, Depends, File, UploadFile, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
 from .. import models
-from ..camera_configuration import CameraConfiguration, Homography, Aruco, homography_report
+from ..camera_configuration import CameraConfiguration, Homography, Aruco, Point, WorldPoint, homography_report, fit_homography
 from ..database import get_db
 from ..deps import require_admin
 from ..audit import log as audit_log
@@ -54,6 +57,35 @@ def validate_homography(body:Homography,identity=Depends(scope)):
         raise HTTPException(422,'보정 확인에는 호모그래피 사용 설정과 기준점·영상 크기·실측 크기가 필요합니다.')
     return {'valid':True,'saved':False,'command_issued':False,
             'image_size':body.image_size,'homography_report':homography_report(body)}
+
+
+class CheckPointInput(BaseModel):
+    model_config=ConfigDict(extra='forbid')
+    homography: Homography
+    image_point: Point
+    measured_point: WorldPoint
+
+
+@router.post('/configuration/homography/check-point')
+def check_point(body:CheckPointInput,identity=Depends(scope)):
+    h=body.homography
+    if not h.enabled:raise HTTPException(422,'검증하려면 호모그래피 보정값이 필요합니다.')
+    pixel=np.array([body.image_point.x,body.image_point.y])
+    corners=np.array([[p.x,p.y] for p in h.image_points[:4]])
+    for start,end in zip(corners,np.roll(corners,-1,axis=0)):
+        edge=end-start;delta=pixel-start
+        if edge[0]*delta[1]-edge[1]*delta[0]<-1e-7:
+            raise HTTPException(422,'검증점은 보정 영역 안에서 선택하세요.')
+    if any(np.linalg.norm(pixel-[p.x,p.y])<1e-6 for p in h.image_points):
+        raise HTTPException(422,'보정에 사용하지 않은 별도 지점을 선택하세요.')
+    matrix,_=fit_homography(h)
+    projected=matrix@np.r_[pixel,1.]
+    if not np.isfinite(projected).all() or abs(projected[2])<1e-12:
+        raise HTTPException(422,'선택한 지점의 좌표를 계산할 수 없습니다.')
+    x,y=(projected[:2]/projected[2]).tolist()
+    dx,dy=x-body.measured_point.x,y-body.measured_point.y
+    return {'projected_point':{'x':x,'y':y},'error_m':math.hypot(dx,dy),
+            'delta_m':{'x':dx,'y':dy},'saved':False,'command_issued':False}
 
 
 @router.put('/configuration/homography')

@@ -204,6 +204,17 @@
         <p id="homographyFitStatus" class="camera-setting-help" role="status">저장하면 전체 기준점의 재투영 오차를 계산합니다.</p>
         <p class="camera-setting-help">실제 좌표의 원점은 보정 영역 좌하단이며, +X는 오른쪽, +Y는 위쪽입니다. 영상 픽셀 Y는 아래로 증가하지만 실제 Y는 위로 증가합니다. 카메라 위치·방향이 바뀌면 다시 보정하세요.</p>
         <div class="sim-controls"><button class="btn" id="homographyValidateBtn" type="button">저장 전 보정 확인</button><button class="btn primary" id="homographySaveBtn" type="button">호모그래피 저장 · 적용</button></div>
+        <details class="camera-settings">
+          <summary>별도 실측 지점으로 정확도 확인</summary>
+          <p class="camera-setting-help">보정에 사용하지 않은 지점을 영상에서 선택하고 실측 좌표를 입력하세요. 기준점과 저장된 설정은 바뀌지 않습니다.</p>
+          <div class="sim-controls"><button class="btn" id="homographyCheckPickBtn" type="button">영상에서 검증점 선택</button></div>
+          <div class="camera-setting-fields">
+            <label>검증점 실제 X(m)<input id="homographyCheckX" type="number" min="0" step="0.001"></label>
+            <label>검증점 실제 Y(m)<input id="homographyCheckY" type="number" min="0" step="0.001"></label>
+          </div>
+          <button class="btn" id="homographyCheckBtn" type="button">실측 오차 확인</button>
+          <p id="homographyCheckStatus" class="camera-setting-help" role="status">검증점을 선택하세요.</p>
+        </details>
         <p id="homographyStatus" class="camera-setting-help" role="status">설정 조회 중…</p>
       </section>
       <section class="card">
@@ -291,6 +302,6 @@
 </div>
 
 <script src="js/auth.js?v=calibration-validation-1"></script>
-<script src="js/bootstrap.js?v=camera-unified-4" data-scripts="js/dashboard.js?v=large-square-roi-2,js/analysis-layout.js?v=single-camera-1,js/roi-camera.js?v=square-roi-1,js/vision-settings.js?v=homography-preview-1,js/camera.js?v=inference-diagnostics-1"></script>
+<script src="js/bootstrap.js?v=camera-unified-4" data-scripts="js/dashboard.js?v=large-square-roi-2,js/analysis-layout.js?v=single-camera-1,js/roi-camera.js?v=square-roi-1,js/vision-settings.js?v=independent-check-1,js/camera.js?v=inference-diagnostics-1"></script>
 </body>
 </html>
