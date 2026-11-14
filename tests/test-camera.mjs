@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
 
-async function scenario({result, error, deferredCamera=false}){
+async function scenario({result, error, serverError, deferredCamera=false}){
   const elements=new Map(), calls=[], drawings=[], texts=[], timers=new Map(), intervals=new Map();
   let stopped=false, pendingCamera;
   const context2d={clearRect(){drawings.length=0;},drawImage(){},strokeRect(...args){drawings.push(args);},fillText(text){texts.push(text);}};
@@ -21,7 +21,7 @@ async function scenario({result, error, deferredCamera=false}){
     dgApi:async(path,options={})=>{
       calls.push({path,options});
       if(path.startsWith('/vision/streams?')) return {stream_id:'session-one'};
-      if(path.includes('/results')){if(error)throw new Error(error);return {analysis:{...result,frame_id:1}};}
+      if(path.includes('/results')){if(serverError)return {last_error:'ValueError',last_error_code:serverError};if(error)throw new Error(error);return {analysis:{...result,frame_id:1}};}
       return {};
     },
     AbortController,FormData,Blob,Number,Math,URLSearchParams,
@@ -68,3 +68,10 @@ assert.equal(reconfigured.stopped(),false);
 assert.equal(reconfigured.calls.filter(call=>call.path.startsWith('/vision/streams?')).length,2);
 reconfigured.disconnect();
 console.log('Camera inference, boxes, empty results, errors, disconnect, and permission cancellation passed');
+
+const cold=await scenario({serverError:'MODEL_RESULT_EXPIRED'});
+assert.match(cold.elements.get('cameraStatus').textContent,/오래된 결과를 폐기/);
+assert.match(cold.elements.get('cameraStatus').textContent,/자동 재시도/);
+assert.equal(cold.elements.get('localCameraFeed').hidden,false);
+assert.equal(cold.stopped(),false);
+assert.ok([...cold.timers.values()].some(timer=>timer.delay===1000));

@@ -113,7 +113,16 @@
       }
       const snapshot = await dgApi(path('/' + trackingId + '/results'),{signal:request.signal});
       if(run !== generation) return;
-      if(snapshot.last_error) throw new Error('추적 서버 분석 실패: ' + snapshot.last_error);
+      if(snapshot.last_error){
+        const descriptions={
+          MODEL_RESULT_EXPIRED:'AI 응답이 지연되어 오래된 결과를 폐기했습니다. 새 프레임으로 자동 재시도합니다.',
+          FRAME_MISMATCH:'AI 응답의 프레임 번호가 다릅니다.',
+          IMAGE_SIZE_MISMATCH:'AI 응답의 이미지 크기가 촬영 영상과 다릅니다.',
+          INVALID_BBOX:'AI 응답의 대상 좌표가 영상 범위를 벗어났습니다.',
+          INVALID_CLASSIFICATION:'AI 응답의 분류 값이 올바르지 않습니다.'
+        };
+        throw new Error(descriptions[snapshot.last_error_code]||('추적 서버 분석 실패: '+snapshot.last_error));
+      }
       const result = snapshot.analysis;
       if(result && !result.expired && result.frame_id === pendingFrame.id && result.frame_id > lastResult){
         draw(result); overlay.hidden = false;
