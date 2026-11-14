@@ -76,7 +76,8 @@ const state = {
   threshConf: globalSettings.threshConf ?? 0.90,
   threshFrames: globalSettings.threshFrames ?? 15,
   nightPreview:false,
-  roi:dgData.roi.length ? dgData.roi : [{x:12,y:20},{x:70,y:10},{x:88,y:55},{x:55,y:88},{x:8,y:60}],
+  roiIsDefault:!dgData.roi.length,
+  roi:dgData.roi.length ? dgData.roi : defaultRoi(),
   log:[],
   diag:{'카메라':'ok','GPU 서버':'ok','배터리':'ok','모터':'ok','통신':'ok'},
 };
@@ -126,8 +127,17 @@ function closeEventModal(ev){
 }
 
 /* ---------------- ROI RENDER ---------------- */
+function defaultRoi(){
+  const video=document.getElementById('localCameraFeed'),panel=document.getElementById('videoPanel');
+  const width=!video.hidden&&video.videoWidth?video.videoWidth:panel.clientWidth||100;
+  const height=!video.hidden&&video.videoHeight?video.videoHeight:panel.clientHeight||100;
+  const side=Math.min(width,height)*0.6,dx=side/width*50,dy=side/height*50;
+  return [{x:50-dx,y:50-dy},{x:50+dx,y:50-dy},{x:50+dx,y:50+dy},{x:50-dx,y:50+dy}];
+}
+window.dgResizeDefaultRoi=()=>{if(state.roiIsDefault)renderRoi();};
 function roiPointsStr(){ return state.roi.map(p=>`${p.x},${p.y}`).join(' '); }
 function renderRoi(){
+  if(state.roiIsDefault)state.roi=defaultRoi();
   document.getElementById('roiPolyControl').setAttribute('points', roiPointsStr());
   document.getElementById('roiPolyEdit').setAttribute('points', roiPointsStr());
   const svg = document.getElementById('roiSvgEdit');
@@ -144,6 +154,7 @@ function renderRoi(){
         let x = (ev.clientX-rect.left)/rect.width*100;
         let y = (ev.clientY-rect.top)/rect.height*100;
         x=Math.max(0,Math.min(100,x)); y=Math.max(0,Math.min(100,y));
+        state.roiIsDefault=false;
         state.roi[i]={x,y}; renderRoi();
       };
       const up = ()=>{
@@ -158,6 +169,7 @@ function renderRoi(){
   });
 }
 function addRoiPoint(){
+  state.roiIsDefault=false;
   const cx = state.roi.reduce((s,p)=>s+p.x,0)/state.roi.length;
   const cy = state.roi.reduce((s,p)=>s+p.y,0)/state.roi.length;
   state.roi.push({x:cx+(Math.random()*10-5), y:cy+(Math.random()*10-5)});
@@ -165,7 +177,8 @@ function addRoiPoint(){
   pushLog('감시 ROI 정점 추가됨 · 총 '+state.roi.length+'개','info');
 }
 function resetRoi(){
-  state.roi=[{x:12,y:20},{x:70,y:10},{x:88,y:55},{x:55,y:88},{x:8,y:60}];
+  state.roiIsDefault=true;
+  state.roi=defaultRoi();
   renderRoi();
   pushLog('감시 ROI가 기본값으로 초기화됨','info');
 }
@@ -174,6 +187,7 @@ async function saveRoi(){
   const siteId=new URLSearchParams(location.search).get('site');
   try {
     const saved = await dgApi(`/sites/${encodeURIComponent(siteId)}/roi`,{method:'PUT',body:{points:state.roi}});
+    state.roiIsDefault=false;
     state.roi = saved.points; dgData.roi = saved.points;
     renderRoi();
     showToast('감시 구역이 저장됐습니다.');

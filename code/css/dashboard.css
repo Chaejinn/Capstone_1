@@ -272,3 +272,5 @@ body{overflow-x:auto!important}
 
 .brand-home{appearance:none;background:none;border:0;padding:0;color:inherit;text-align:left;cursor:pointer;}
 .brand-home:focus-visible{outline:2px solid var(--teal);outline-offset:6px;border-radius:4px;}
+
+.roi-editor::before{display:none;}

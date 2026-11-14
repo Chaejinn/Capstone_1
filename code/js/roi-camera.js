@@ -5,6 +5,7 @@
   const editor = el('roiEditor'), panel = el('videoPanel'), overlay = el('roiSvgControl');
   let current = null;
   function fit(){
+    window.dgResizeDefaultRoi?.();
     if(!current || !source.videoWidth || !source.videoHeight) return;
     editor.style.setProperty('--roi-camera-aspect',`${source.videoWidth} / ${source.videoHeight}`);
     // The live video uses object-fit:contain. Keep percentage ROI coordinates
