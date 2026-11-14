@@ -7,6 +7,7 @@ RETURN은 현재 정지만 수행한다. CLEAR_ESTOP의 보드 해제 동작은 
 """
 import argparse
 import os
+import sys
 import threading
 import time
 
@@ -74,7 +75,21 @@ class Board:
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--list-ports", action="store_true", help="사용 가능한 직렬 포트 조회")
+    parser.add_argument("--port", default=os.environ.get("DG_BRIDGE_PORT"), help="HC-06 송신 포트 (Mac: /dev/cu.…, Windows: COM…)")
+    parser.add_argument("--baud", type=int, default=9600, help="보드 통신 속도 (기본 9600)")
+    parser.add_argument("--check-web", action="store_true", help="직렬 장치를 열지 않고 웹 인증·조회 확인")
     args = parser.parse_args()
+    if args.list_ports:
+        from serial.tools import list_ports
+        for item in list_ports.comports():
+            print(f"{item.device}: {item.description}")
+        return
+    if args.baud <= 0:
+        parser.error("통신 속도는 양수여야 합니다.")
+    port = args.port or ("COM4" if sys.platform == "win32" else None)
+    if not args.dry_run and not args.check_web and not port:
+        parser.error("HC-06 포트를 지정하세요: --list-ports로 확인한 뒤 --port /dev/cu.… 사용")
     token = os.environ.get("DG_BRIDGE_TOKEN", "").strip()
     if not token:
         parser.error("DG_BRIDGE_TOKEN 환경변수에 토큰을 설정하세요.")
@@ -87,9 +102,17 @@ def main():
     http = requests.Session()
     http.headers["Authorization"] = auth
     try:
+        if args.check_web:
+            response = http.get(CONTROL_URL, params={"latest":"true"}, timeout=5)
+            response.raise_for_status()
+            data=response.json()
+            if not isinstance(data.get("cursor"),int) or not isinstance(data.get("packets"),list):
+                raise ValueError("웹 응답 형식이 올바르지 않습니다.")
+            print("웹 인증·명령 조회 정상 (보드 연결·명령 전송 없음)")
+            return
         if not args.dry_run:
             import serial
-            serial_port = serial.Serial(PORT, 9600, timeout=0.2, write_timeout=0.5)
+            serial_port = serial.Serial(port, args.baud, timeout=0.2, write_timeout=0.5)
             time.sleep(2)
         board = Board(serial_port)
         board.stop()
