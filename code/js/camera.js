@@ -6,6 +6,11 @@
   let controller = null, stream = null, timer = null, generation = 0, frameId = 0;
   let trackingId = null, pendingFrame = null, lastResult = 0;
   let resultClock = null, resultCapturedAt = null, resultInferenceMs = 0;
+  const issuedDepartures = new Set();
+  let departureStatus = '';
+  function stopDeparture(){
+    if(siteId) void dgApi('/board-control/stop?site_id='+encodeURIComponent(siteId),{method:'POST'}).catch(()=>{});
+  }
   function updateResultTime(){
     if(!resultCapturedAt) return;
     const age = Math.max(0,(Date.now()-resultCapturedAt.getTime())/1000);
@@ -23,6 +28,7 @@
     overlay.getContext('2d').clearRect(0, 0, overlay.width, overlay.height);
   }
   function disconnect(){
+    if(stream) stopDeparture();
     generation++;
     closeTracking(trackingId); trackingId = null; pendingFrame = null; lastResult = 0;
     clearTimeout(timer);
@@ -80,7 +86,32 @@
     el('cameraBadge').textContent = 'CAM LIVE';
     el('videoReadout').textContent = '실시간 카메라 · AI 결과는 오른쪽에 표시됩니다.';
     el('cameraStatus').textContent = detections.some(item=>item.confirmed) ?
-      (detections.some(item=>item.confirmed&&item.coordinate_valid)?'익수 확정 · 실제 출동 차단: 보트 브릿지 연결 필요':'익수 확정 · 실제 출동 차단: 좌표 보정·보트 브릿지 연결 필요') : detections.length ? '대상별 익수 점수 0.8 이상 · 15프레임 연속 확인 중' : data.marker_observation?.detected ? 'ArUco 마커 검출 · 익수 분석 대상 없음' : 'AI 분석 중 · 탐지된 대상 없음';
+      (departureStatus || (detections.some(item=>item.confirmed&&item.coordinate_valid)?'익수 확정 · 출동 조건 확인 중':'익수 확정 · 출동 차단: 실제 좌표 보정 필요')) : detections.length ? '대상별 익수 점수 0.8 이상 · 15프레임 연속 확인 중' : data.marker_observation?.detected ? 'ArUco 마커 검출 · 익수 분석 대상 없음' : 'AI 분석 중 · 탐지된 대상 없음';
+  }
+  async function dispatchConfirmed(result,run){
+    if(state.estop || result.expired || !trackingId) return;
+    const item=(result.detections||[]).find(d=>d.confirmed&&d.coordinate_valid&&d.track_id!=null);
+    if(!item) return;
+    const key=trackingId+':'+item.track_generation+':'+item.track_id;
+    if(issuedDepartures.has(key)) return;
+    try{
+      const reply=await dgApi('/board-control/dispatch?site_id='+encodeURIComponent(siteId),{
+        method:'POST',body:{stream_id:trackingId,frame_id:result.frame_id}
+      });
+      issuedDepartures.add(key);
+      if(run!==generation) {stopDeparture();return;}
+      departureStatus=reply.status==='ISSUED'?'익수 확정 · 출동 명령 발행: 직진 5%, 최대 3초':'익수 확정 · 이미 출동 명령을 발행한 대상';
+      el('cameraStatus').textContent=departureStatus;
+      if(reply.status==='ISSUED'){
+        pushLog(departureStatus+' · 자동 조향·복귀 미연결','crit');
+        playAlarmBeep();
+        switchView('control');
+      }
+    }catch(error){
+      if(run!==generation)return;
+      departureStatus='출동 차단: '+error.message;
+      el('cameraStatus').textContent=departureStatus;
+    }
   }
   async function analyze(run){
     if(run !== generation || !stream) return;
@@ -127,6 +158,7 @@
       if(result && !result.expired && result.frame_id === pendingFrame.id && result.frame_id > lastResult){
         draw(result); overlay.hidden = false;
         lastResult = result.frame_id; pendingFrame = null;
+        await dispatchConfirmed(result,run);
       }else if(Date.now() - pendingFrame.started > 65000){
         throw new Error('추적 분석 시간이 초과되었습니다.');
       }else{
@@ -174,6 +206,7 @@
   el('cameraDisconnectBtn').addEventListener('click',disconnect);
   window.dgRestartCameraTracking=()=>{
     if(!stream)return;
+    stopDeparture();departureStatus='';
     generation++;clearTimeout(timer);controller?.abort();
     closeTracking(trackingId);trackingId=null;pendingFrame=null;lastResult=0;
     el('aiResultPanel').hidden=true;

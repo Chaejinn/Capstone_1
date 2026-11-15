@@ -12,6 +12,7 @@ from backend.platform.routers import camera, events as platform_events, ai_bridg
 from backend.platform.routers import camera_analysis
 from backend.platform.routers import vision, edge, edge_pose, camera_settings
 from backend.platform.routers import test_signals, test_control, test_push
+from backend.platform.routers import board_control
 from .database import Base, SessionLocal, engine
 from .routers import ai_bridge, boat, calibration, config_router, events, judgement, mission, status, ws
 from .services import config_service
@@ -55,6 +56,7 @@ app.include_router(vision.router, prefix="/api")
 app.include_router(edge.router, prefix="/api")
 app.include_router(edge_pose.router, prefix="/api")
 app.include_router(camera_settings.router, prefix="/api")
+app.include_router(board_control.router, prefix="/api")
 vision.install_timing(app)
 if platform_config.CAMERA_ENABLED:
     app.include_router(camera.router, prefix="/api")
