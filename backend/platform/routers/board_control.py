@@ -87,6 +87,21 @@ def stop(identity=Depends(scope), db: Session = Depends(get_db)):
     return dict(ok=True)
 
 
+@router.post('/simulate')
+def simulate(identity=Depends(scope), db: Session = Depends(get_db)):
+    """Explicit physical departure test; never creates an AI judgement or rescue event."""
+    row = channel(db, identity[1])
+    if row is None or row.lease_until <= time.time():
+        raise HTTPException(409, 'Windows 출동 브릿지가 연결되지 않았습니다.')
+    previous = json.loads(row.packet).get('command')
+    if previous != 'STOP':
+        raise HTTPException(409, '이미 출동했거나 비상정지 상태입니다. 브릿지를 다시 시작하세요.')
+    write(row, 'DISPATCH', simulation=True, source='SIMULATED_DROWNING',
+          throttle=5, max_seconds=3, expires_at=time.time()+3)
+    db.commit()
+    return dict(status='ISSUED', simulation=True, throttle=5, max_seconds=3)
+
+
 def eligible(analysis, frame_id, now):
     if not isinstance(analysis, dict) or analysis.get('expired') is not False or analysis.get('frame_id') != frame_id:
         return None

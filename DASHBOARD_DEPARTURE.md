@@ -39,3 +39,13 @@ created during startup. It is separate from `/api/test-control`; random/manual
 signal-test commands never drive this bridge. The Arduino `S` command stops
 propulsion and centers steering but does not stop net servos or latch firmware.
 The software bridge supplies the stop latch. Full PID navigation remains separate.
+
+## Explicit simulated confirmation
+
+With the bridge armed, the dashboard button `모의 익수 판정 · 실제 보드 3초 출동`
+issues one clearly marked simulated command through `/api/board-control/simulate`.
+It does not require a camera or calibration, does not fabricate model scores,
+and does not create a real AI judgement or rescue event. It does move the board
+at 5% throttle for at most 3 seconds. The same lease, stop latch, one-departure
+limit, and local watchdog apply. This verifies command delivery and motion,
+not AI accuracy, real drowning detection, steering, or rescue completion.

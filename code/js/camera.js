@@ -204,6 +204,20 @@
     }
   });
   el('cameraDisconnectBtn').addEventListener('click',disconnect);
+  el('simulateDepartureBtn').addEventListener('click',async()=>{
+    const button=el('simulateDepartureBtn');
+    if(state.estop){el('cameraStatus').textContent='비상정지 상태입니다. 브릿지를 다시 시작하세요.';return;}
+    button.disabled=true;
+    try{
+      await dgApi('/board-control/simulate?site_id='+encodeURIComponent(siteId||''),{method:'POST'});
+      const message='[모의 시험 · 실제 AI 판정 아님] 출동 명령 발행 · 추진 5%, 최대 3초 후 정지';
+      el('cameraStatus').textContent=message;
+      pushLog(message,'warn');
+    }catch(error){
+      el('cameraStatus').textContent='모의 출동 실패: '+error.message;
+      button.disabled=false;
+    }
+  });
   window.dgRestartCameraTracking=()=>{
     if(!stream)return;
     stopDeparture();departureStatus='';

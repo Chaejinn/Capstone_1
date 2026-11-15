@@ -52,6 +52,21 @@ class DepartureTests(unittest.TestCase):
         self.assertEqual(self.dispatch().status_code,409)
         self.forward.assert_awaited_once()
 
+    def test_simulation_is_explicit_bounded_and_only_once_per_arming(self):
+        self.assertEqual(self.client.post('/board-control/simulate').status_code,409)
+        self.connect()
+        result=self.client.post('/board-control/simulate')
+        self.assertEqual(result.status_code,200)
+        self.assertTrue(result.json()['simulation'])
+        packet=self.client.post('/board-control/poll',json=self.bridge).json()
+        self.assertEqual(packet['source'],'SIMULATED_DROWNING')
+        self.assertEqual((packet['throttle'],packet['max_seconds']),(5,3))
+        self.assertEqual(self.client.post('/board-control/simulate').status_code,409)
+        self.forward.assert_not_awaited()
+        self.connect()
+        self.client.post('/board-control/stop')
+        self.assertEqual(self.client.post('/board-control/simulate').status_code,409)
+
     def test_confirmed_departure_is_bounded_and_never_reissued(self):
         self.connect()
         self.assertEqual(self.dispatch().json()['status'],'ISSUED')

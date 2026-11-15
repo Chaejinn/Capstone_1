@@ -28,6 +28,8 @@ class Departure:
             self.send('S')
 
     def start(self, packet):
+        if packet.get('simulation'):
+            print('SIMULATED DROWNING TEST: not an AI judgement.', flush=True)
         # Client hard limits cannot be raised by remote packet values.
         remaining = min(3.0, float(packet['max_seconds']), float(packet['expires_at'])-time.time())
         if remaining <= 0 or packet.get('throttle') != 5:
