@@ -1,10 +1,15 @@
 """One bounded USB steering/throttle test; no web command polling."""
 import time
+import argparse
 
 import serial
 
 
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--throttle', type=int, choices=(5, 10), default=5)
+    parser.add_argument('--duration', type=float, choices=(0.5, 0.8), default=0.5)
+    args = parser.parse_args()
     print("Close the previous stop-only bridge with Ctrl+C. Waiting for COM3...", flush=True)
     deadline = time.monotonic() + 120
     while True:
@@ -40,11 +45,11 @@ def main():
         command("M,0,-5", "OK M 0 -5")
         time.sleep(1)
         command("S", "OK S")
-        print("THROTTLE 5% for at most 0.5s; rudder centered", flush=True)
+        print(f"THROTTLE {args.throttle}% for {args.duration}s; rudder centered", flush=True)
         # Do not wait for an acknowledgement before ending the bounded pulse.
-        board.write(b"M,5,0\n")
+        board.write(f"M,{args.throttle},0\n".encode('ascii'))
         board.flush()
-        time.sleep(0.5)
+        time.sleep(args.duration)
         command("S", "OK S")
         print("TEST COMPLETE. Verify physical movement separately.", flush=True)
     except KeyboardInterrupt:

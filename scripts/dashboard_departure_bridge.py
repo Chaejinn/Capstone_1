@@ -31,14 +31,14 @@ class Departure:
         if packet.get('simulation'):
             print('SIMULATED DROWNING TEST: not an AI judgement.', flush=True)
         # Client hard limits cannot be raised by remote packet values.
-        remaining = min(3.0, float(packet['max_seconds']), float(packet['expires_at'])-time.time())
-        if remaining <= 0 or packet.get('throttle') != 5:
+        remaining = min(0.8, float(packet['max_seconds']), float(packet['expires_at'])-time.time())
+        if remaining <= 0 or packet.get('throttle') != 10:
             print('EXPIRED_OR_INVALID_DEPARTURE; skipped.', flush=True)
             return
         with self.lock:
             self.until = time.monotonic() + remaining
-            self.send('M,5,0')
-        print(f'DEPARTURE: throttle 5%, rudder 0, maximum {remaining:.2f}s', flush=True)
+            self.send('M,10,0')
+        print(f'DEPARTURE: throttle 10%, rudder 0, maximum {remaining:.2f}s', flush=True)
 
     def watchdog(self, shutdown):
         try:
@@ -51,7 +51,7 @@ class Departure:
                         self.send('S')
                         print('DEPARTURE LIMIT: STOP', flush=True)
                     else:
-                        self.send('M,5,0')
+                        self.send('M,10,0')
         except serial.SerialException:
             self.failure = True
             shutdown.set()

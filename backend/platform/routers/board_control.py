@@ -97,9 +97,9 @@ def simulate(identity=Depends(scope), db: Session = Depends(get_db)):
     if previous != 'STOP':
         raise HTTPException(409, '이미 출동했거나 비상정지 상태입니다. 브릿지를 다시 시작하세요.')
     write(row, 'DISPATCH', simulation=True, source='SIMULATED_DROWNING',
-          throttle=5, max_seconds=3, expires_at=time.time()+3)
+          throttle=10, max_seconds=0.8, expires_at=time.time()+3)
     db.commit()
-    return dict(status='ISSUED', simulation=True, throttle=5, max_seconds=3)
+    return dict(status='ISSUED', simulation=True, throttle=10, max_seconds=0.8)
 
 
 def eligible(analysis, frame_id, now):
@@ -141,7 +141,7 @@ async def dispatch(body: EvidenceInput, identity=Depends(scope), db: Session = D
     if json.loads(row.packet).get('command') == 'DISPATCH':
         raise HTTPException(409, '이미 출동했습니다. 다음 출동은 브릿지를 다시 시작하세요.')
     db.add(Receipt(id=evidence_key))
-    write(row, 'DISPATCH', throttle=5, max_seconds=3,
+    write(row, 'DISPATCH', throttle=10, max_seconds=0.8,
           expires_at=time.time() + 3, target_x_m=item['target_x_m'], target_y_m=item['target_y_m'])
     db.commit()
-    return dict(status='ISSUED', revision=row.revision, max_seconds=3, throttle=5)
+    return dict(status='ISSUED', revision=row.revision, max_seconds=0.8, throttle=10)

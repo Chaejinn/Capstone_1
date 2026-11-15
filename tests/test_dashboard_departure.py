@@ -60,7 +60,7 @@ class DepartureTests(unittest.TestCase):
         self.assertTrue(result.json()['simulation'])
         packet=self.client.post('/board-control/poll',json=self.bridge).json()
         self.assertEqual(packet['source'],'SIMULATED_DROWNING')
-        self.assertEqual((packet['throttle'],packet['max_seconds']),(5,3))
+        self.assertEqual((packet['throttle'],packet['max_seconds']),(10,0.8))
         self.assertEqual(self.client.post('/board-control/simulate').status_code,409)
         self.forward.assert_not_awaited()
         self.connect()
@@ -71,7 +71,7 @@ class DepartureTests(unittest.TestCase):
         self.connect()
         self.assertEqual(self.dispatch().json()['status'],'ISSUED')
         packet=self.client.post('/board-control/poll',json=self.bridge).json()
-        self.assertEqual((packet['command'],packet['throttle'],packet['max_seconds']),('DISPATCH',5,3))
+        self.assertEqual((packet['command'],packet['throttle'],packet['max_seconds']),('DISPATCH',10,0.8))
         revision=packet['revision']
         self.assertEqual(self.dispatch().json()['status'],'ALREADY_ISSUED')
         self.assertEqual(self.client.post('/board-control/poll',json=self.bridge).json()['revision'],revision)
@@ -119,8 +119,8 @@ class DepartureTests(unittest.TestCase):
             def flush(self): pass
         board=Board()
         drive=Departure(board)
-        drive.start(dict(max_seconds=100,expires_at=time.time()+100,throttle=5))
-        self.assertLessEqual(drive.until-time.monotonic(),3)
+        drive.start(dict(max_seconds=100,expires_at=time.time()+100,throttle=10))
+        self.assertLessEqual(drive.until-time.monotonic(),0.8)
         drive.until=time.monotonic()-1
         class Tick:
             calls=0
@@ -132,7 +132,7 @@ class DepartureTests(unittest.TestCase):
         self.assertEqual(board.lines[-1],b'S\n')
         self.assertEqual(drive.until,0)
         count=len(board.lines)
-        drive.start(dict(max_seconds=3,expires_at=time.time()-1,throttle=5))
+        drive.start(dict(max_seconds=3,expires_at=time.time()-1,throttle=10))
         self.assertEqual(len(board.lines),count)
 
 

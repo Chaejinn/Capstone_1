@@ -2,7 +2,7 @@
 
 This connects verified live browser-camera drowning confirmations to one bounded
 departure on Arduino Uno, COM3 at 9600 baud, site `chunjeon`. It is a straight
-departure demonstration: throttle 5%, rudder centered, at most 3 seconds. It does
+departure demonstration: throttle 10%, rudder centered, at most 0.8 seconds. It does
 not navigate to a target, deploy the net, return home, or complete a rescue.
 
 After deploying this revision, close other programs using COM3 and run:
@@ -22,7 +22,7 @@ The API fetches the model result itself and must receive confirmation within
 3 seconds. A live bridge lease is required. There is one departure per local
 arming session, with persistent deduplication per stream/generation/track.
 
-Expected bridge output: `DEPARTURE`, `BOARD: OK M 5 0`, then
+Expected bridge output: `DEPARTURE`, `BOARD: OK M 10 0`, then
 `DEPARTURE LIMIT: STOP` and `BOARD: OK S`. Observe physical movement separately.
 The dashboard log means the server issued the command, not that motion was
 observed or that rescue completed. There is no calibrated speed or distance.
@@ -46,6 +46,6 @@ With the bridge armed, the dashboard button `모의 익수 판정 · 실제 보�
 issues one clearly marked simulated command through `/api/board-control/simulate`.
 It does not require a camera or calibration, does not fabricate model scores,
 and does not create a real AI judgement or rescue event. It does move the board
-at 5% throttle for at most 3 seconds. The same lease, stop latch, one-departure
+at 10% throttle for at most 0.8 seconds. The same lease, stop latch, one-departure
 limit, and local watchdog apply. This verifies command delivery and motion,
 not AI accuracy, real drowning detection, steering, or rescue completion.

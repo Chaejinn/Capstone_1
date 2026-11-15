@@ -100,7 +100,7 @@
       });
       issuedDepartures.add(key);
       if(run!==generation) {stopDeparture();return;}
-      departureStatus=reply.status==='ISSUED'?'익수 확정 · 출동 명령 발행: 직진 5%, 최대 3초':'익수 확정 · 이미 출동 명령을 발행한 대상';
+      departureStatus=reply.status==='ISSUED'?'익수 확정 · 출동 명령 발행: 직진 10%, 최대 0.8초':'익수 확정 · 이미 출동 명령을 발행한 대상';
       el('cameraStatus').textContent=departureStatus;
       if(reply.status==='ISSUED'){
         pushLog(departureStatus+' · 자동 조향·복귀 미연결','crit');
@@ -210,7 +210,7 @@
     button.disabled=true;
     try{
       await dgApi('/board-control/simulate?site_id='+encodeURIComponent(siteId||''),{method:'POST'});
-      const message='[모의 시험 · 실제 AI 판정 아님] 출동 명령 발행 · 추진 5%, 최대 3초 후 정지';
+      const message='[모의 시험 · 실제 AI 판정 아님] 출동 명령 발행 · 추진 10%, 최대 0.8초 후 정지';
       el('cameraStatus').textContent=message;
       pushLog(message,'warn');
     }catch(error){
