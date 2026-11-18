@@ -32,12 +32,15 @@ const context=vm.createContext({document:{getElementById:element,createElement:t
     if(options.method==='PUT'){
       const part=path.includes('/homography')?'homography':'aruco';
       settings={...settings,revision:settings.revision+1,[part]:structuredClone(options.body)};
+      if(part==='homography')settings.homography_matrix=[[.01,0,-.1],[0,-.01,.9],[0,0,1]];
     }
     if(path.includes('/aruco/marker'))return {image_base64:'png',dictionary:'DICT_4X4_50',marker_id:3};
     if(path.includes('/inspect'))return {image_size:[960,540],configuration_revision:settings.revision,
       marker_observation:{enabled:true,detected:true,marker_id:3,corners_px:[[1,1],[2,1],[2,2],[1,2]],coordinate_valid:false,coordinate_status:'UNCALIBRATED'}};
     return structuredClone(settings);
   }});
+vm.runInContext(readFileSync('code/js/live-aruco-math.js','utf8'),context);
+context.window.DgLiveArucoMath=context.DgLiveArucoMath;
 vm.runInContext(readFileSync('code/js/vision-settings.js','utf8'),context);
 const flush=async()=>{for(let i=0;i<40;i++)await Promise.resolve();};await flush();
 assert.match(element('arucoStatus').textContent,/저장된 설정.*사용 안 함/);
@@ -71,6 +74,12 @@ assert.equal(restarts,1);assert.equal(element('arucoId').value,'3','Saving homog
 assert.ok(element('homographyControlGroup').children.some(node=>node.textContent==='+X'));
 assert.ok(element('homographyControlGroup').children.some(node=>node.textContent==='+Y'));
 assert.match(element('homographyControlStatus').textContent,/호모그래피 표시 중/);
+assert.ok(element('homographyControlGroup').children.some(node=>node.textContent?.includes('X 0.00, Y 0.80 m')));
+element('videoPanel').handlers.pointermove({clientX:400,clientY:225});
+assert.match(element('controlCoordinateReadout').textContent,/X 0.400 m · Y 0.400 m/);
+assert.equal(element('controlCoordinateReadout').hidden,false);
+element('videoPanel').handlers.pointerleave();assert.equal(element('controlCoordinateReadout').hidden,true);
+
 const savedOverlayCount=element('homographyControlGroup').children.length;
 
 const saved=calls.find(call=>call.path.includes('/configuration/homography'));

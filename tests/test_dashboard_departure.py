@@ -58,6 +58,16 @@ class DepartureTests(unittest.TestCase):
         self.analysis['monitoring_roi']={'points':[{'x':0,'y':0},{'x':100,'y':0},{'x':100,'y':100},{'x':0,'y':100}]}
         self.assertEqual(self.dispatch().status_code,409)
 
+    def test_status_is_read_only_and_does_not_extend_bridge_lease(self):
+        self.assertFalse(self.client.get('/board-control/status').json()['connected'])
+        self.connect()
+        with self.sessions() as db:
+            row=db.query(control.Channel).first();before=(row.lease_until,row.packet,row.revision)
+        response=self.client.get('/board-control/status')
+        self.assertTrue(response.json()['connected']);self.assertFalse(response.json()['hardware_acknowledged'])
+        with self.sessions() as db:
+            row=db.query(control.Channel).first();self.assertEqual(before,(row.lease_until,row.packet,row.revision))
+
     def test_no_bridge_blocks_and_server_fetches_its_own_evidence(self):
         self.assertEqual(self.dispatch().status_code,409)
         self.forward.assert_awaited_once()

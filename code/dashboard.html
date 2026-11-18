@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/common.css">
-<link rel="stylesheet" href="css/dashboard.css?v=live-controls-1">
+<link rel="stylesheet" href="css/dashboard.css?v=live-aruco-1">
 <style>body{overflow:hidden; height:100vh;}</style>
 </head>
 <body>
@@ -75,6 +75,9 @@
               <polygon id="roiPolyControl" points="" fill="rgba(141,160,188,0.05)" stroke="rgba(141,160,188,0.5)" stroke-width="0.4" stroke-dasharray="2,1.5"/>
               <g id="homographyControlGroup" aria-label="저장된 호모그래피 보정 영역"></g>
             </svg>
+            <canvas id="liveMarkerOverlay" hidden aria-label="실시간 보드 마커와 익수자 거리"></canvas>
+            <div id="controlCoordinateReadout" hidden></div>
+            <div id="liveMarkerReadout" hidden aria-live="off"></div>
             <div id="targetBox" class="det-box" style="display:none;">
               <span class="lbl" id="targetLbl">후보</span>
               <svg class="target-person" viewBox="0 0 24 24" role="img" aria-label="구조 대기 중인 요구조자">
@@ -103,6 +106,7 @@
             </form>
             <p id="cameraStatus" role="status"></p>
             <p id="cameraConfigurationStatus" role="status"></p>
+            <p id="liveMarkerStatus" role="status"></p>
             <p id="homographyControlStatus" role="status"></p>
           </details>
 
@@ -146,8 +150,34 @@
             </div>
           </div>
         </div>
-
+        <div id="signalSideHost">
+      <section class="card" id="dashboardSignalTest">
+        <h3>보드 신호 테스트</h3>
+        <label class="camera-setting-option">연결 방식 <select id="signalBridgeMode"><option value="usb">USB 출동 브릿지</option><option value="hc06">HC-06 신호 브릿지</option></select></label>
+        <p id="signalBridgeHelp" class="camera-setting-help"></p>
+        <p id="signalBridgeStatus" class="camera-setting-help" role="status">설정 화면을 열면 상태를 조회합니다.</p>
+        <div id="signalTargetFields" class="camera-setting-fields" hidden>
+          <label>시험 목표 X(m)<input id="signalTargetX" type="number" step="any" value="5"></label>
+          <label>시험 목표 Y(m)<input id="signalTargetY" type="number" step="any" value="0"></label>
+        </div>
+        <div class="sim-controls signal-command-buttons">
+          <button class="btn primary" type="button" data-signal-command="DISPATCH">출동 시험</button>
+          <button class="btn" type="button" data-signal-command="ESTOP">비상정지</button>
+          <button class="btn" type="button" data-signal-command="CLEAR_ESTOP">정지 해제</button>
+          <button class="btn" type="button" data-signal-command="CANCEL">출동 취소</button>
+          <button class="btn" type="button" data-signal-command="DEPLOY">구조망 전개</button>
+          <button class="btn" type="button" data-signal-command="RETURN">복귀 신호</button>
+          <button class="btn" type="button" data-signal-command="COMPLETE">완료 신호</button>
+          <button class="btn" type="button" data-signal-command="RESET">초기화</button>
+        </div>
+        <p id="signalCommandStatus" class="camera-setting-help" role="status">버튼을 눌렀을 때만 명령을 전송합니다.</p>
+        <button class="btn" id="signalAutoStop" type="button" hidden>자동 임의 신호 중지</button>
+        <pre id="signalServerState" class="signal-state">서버 상태 조회 대기</pre>
+        <ol id="signalHistory" class="signal-history" aria-label="이 화면의 최근 신호 기록"></ol>
+      </section>
+        </div>
       </div>
+      <div id="signalWideHost" class="signal-wide-host" hidden></div>
 
       <div class="card timeline-card">
         <h3>◷ 이벤트 타임라인 <span class="tag"><b id="logCount">0건</b> · ● 실시간</span></h3>
@@ -220,6 +250,7 @@
         </details>
         <p id="homographyStatus" class="camera-setting-help" role="status">설정 조회 중…</p>
       </section>
+      <div class="settings-right-stack">
       <section class="card">
         <h3>ArUco · 구조보드 마커 설정</h3>
         <label class="camera-setting-option"><input id="arucoEnabled" type="checkbox"> ArUco 마커 검출 사용</label>
@@ -242,6 +273,7 @@
         <canvas id="arucoInspection" hidden aria-label="설정 확인용 분석 프레임"></canvas>
         <p id="arucoInspectionStatus" class="camera-setting-help" role="status"></p>
       </section>
+      </div>
     </div>
 
     <div class="settings-grid">
@@ -305,6 +337,6 @@
 </div>
 
 <script src="js/auth.js?v=calibration-validation-1"></script>
-<script src="js/bootstrap.js?v=camera-unified-4" data-scripts="js/dashboard.js?v=roi-filter-1,js/analysis-layout.js?v=single-camera-1,js/roi-camera.js?v=square-roi-1,js/vision-settings.js?v=control-homography-1,js/camera.js?v=roi-paced-analysis-1"></script>
+<script src="js/bootstrap.js?v=camera-unified-4" data-scripts="js/dashboard.js?v=live-distance-1,js/analysis-layout.js?v=single-camera-1,js/roi-camera.js?v=square-roi-1,js/live-aruco-math.js?v=1,js/live-aruco.js?v=1,js/vision-settings.js?v=live-aruco-1,js/camera.js?v=live-aruco-1,js/dashboard-signal-test.js?v=1"></script>
 </body>
 </html>

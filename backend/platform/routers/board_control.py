@@ -53,6 +53,15 @@ def write(row, command, **extra):
     row.packet = json.dumps(dict(command=command, issued_at=time.time(), **extra))
 
 
+@router.get('/status')
+def status(identity=Depends(scope),db:Session=Depends(get_db)):
+    row=db.query(Channel).filter_by(site_id=identity[1]).first()
+    packet=json.loads(row.packet) if row else {}
+    return {'connected':bool(row and row.lease_until>time.time()),
+            'last_command':packet.get('command'),'revision':row.revision if row else 0,
+            'simulation':bool(packet.get('simulation')),'hardware_acknowledged':False}
+
+
 @router.post('/connect')
 def connect(body: BridgeInput, identity=Depends(scope), db: Session = Depends(get_db)):
     row = channel(db, identity[1])

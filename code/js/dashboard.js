@@ -249,6 +249,7 @@ function updateModeBadge(){
   else { b.textContent='자율 모드'; }
 }
 function triggerEstop(){
+  window.dgStopSignalTest?.();
   void dgApi('/board-control/stop?site_id='+encodeURIComponent(new URLSearchParams(location.search).get('site')||''),{method:'POST'})
     .catch(e=>pushLog('실제 보드 비상정지 전송 실패: '+e.message,'crit'));
   fetch("/api/boat/estop", {method:"POST"}).catch(e => pushLog("서버 비상정지 전송 실패: " + e.message, "crit"));
@@ -350,6 +351,7 @@ function cancelDispatch(){
 
 /* ---------------- SIM CORE ---------------- */
 function updateSimControls(){
+  window.dgPlaceSignalTest?.();
   const startBtn = document.getElementById('startBtn');
   startBtn.hidden=Boolean(window.dgCameraLive);
   document.getElementById('simulateDepartureBtn').hidden=Boolean(window.dgCameraLive);
@@ -520,8 +522,8 @@ function renderStepper(){
   });
 }
 function updateSideStats(){
-  document.getElementById('statDistLabel').textContent = state.carrying ? '복귀 지점까지 거리' : '표적까지 거리';
-  document.getElementById('statDist').textContent = state.distance===null ? '— m' : state.distance.toFixed(1)+' m';
+  document.getElementById('statDistLabel').textContent = window.dgCameraLive?'익수자까지 거리':state.carrying ? '복귀 지점까지 거리' : '표적까지 거리';
+  document.getElementById('statDist').textContent = window.dgCameraLive?(window.dgLiveDistance?window.dgLiveDistance.distance_m.toFixed(2)+' m':'— m'):state.distance===null ? '— m' : state.distance.toFixed(1)+' m';
   document.getElementById('statSpeed').textContent = (['APPROACHING','RETURNING'].includes(state.phase) && state.running && !state.estop) ? '1.1 m/s' : '0.0 m/s';
   document.getElementById('statBatt').textContent = state.battery+'%';
   document.getElementById('battBar').style.width = state.battery+'%';

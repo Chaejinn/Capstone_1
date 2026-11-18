@@ -5,7 +5,7 @@
   const query='?site_id='+encodeURIComponent(site||'');
   const video=el('homographyCameraFeed'), source=el('localCameraFeed'), svg=el('homographySvg');
   let current=null, points=[], worldPoints=[], fitReport=null, imageSize=null, picking=false, revision=0, ready=false, appliedRevision=null;
-  let checkPoint=null,savedHomography=null;
+  let checkPoint=null,savedHomography=null,savedMatrix=null;
   const admin=dgGetSession()?.role==='admin';
   const number=id=>el(id).value.trim()===''?null:Number(el(id).value);
   function worldCoordinates(){
@@ -121,9 +121,24 @@
       add('text',{x:Math.max(2,Math.min(91,(origin.x+end.x)/2+2)),y:Math.max(4,Math.min(96,(origin.y+end.y)/2-2)),fill:'#ffd166','font-size':'3'},label);
     }
     p.forEach((point,i)=>add('circle',{cx:point.x,cy:point.y,r:i<4?'.9':'.6',fill:'#ffd166'}));
+    const world=h.world_points||[{x:0,y:h.pool_height_m},{x:h.pool_width_m,y:h.pool_height_m},{x:h.pool_width_m,y:0},{x:0,y:0}];
+    p.slice(0,4).forEach((point,i)=>add('text',{
+      x:Math.max(1,Math.min(68,point.x+1)),y:Math.max(4,Math.min(97,point.y+4)),fill:'#ffd166','font-size':'2.2'},
+      `X ${Number(world[i].x).toFixed(2)}, Y ${Number(world[i].y).toFixed(2)} m`));
+
     add('text',{x:Math.max(2,Math.min(75,p[0].x+2)),y:Math.max(4,p[0].y-2),fill:'#ffd166','font-size':'2.6'},'호모그래피');
     status.textContent=`호모그래피 표시 중 · 노란 점선: 보정 영역·X/Y축 · ROI는 별도 표시 · 기준점 ${p.length}개`;
   }
+  el('videoPanel').addEventListener('pointermove',event=>{
+    const out=el('controlCoordinateReadout');
+    if(!current||!savedHomography?.enabled||!savedMatrix||!window.DgLiveArucoMath||
+       Math.abs((source.videoWidth/source.videoHeight)/(savedHomography.image_size[0]/savedHomography.image_size[1])-1)>.01){out.hidden=true;return;}
+    const rect=el('roiSvgControl').getBoundingClientRect();
+    const point=[(event.clientX-rect.left)/rect.width*100,(event.clientY-rect.top)/rect.height*100];
+    const xy=DgLiveArucoMath.inside(point,savedHomography.image_points.slice(0,4))&&DgLiveArucoMath.project(savedMatrix,point);
+    out.hidden=!xy;if(xy)out.textContent=`해당 지점 · X ${xy[0].toFixed(3)} m · Y ${xy[1].toFixed(3)} m`;
+  });
+  el('videoPanel').addEventListener('pointerleave',()=>{el('controlCoordinateReadout').hidden=true;});
   function dimensions(){
     renderControlHomography();
     const w=source.videoWidth,h=source.videoHeight;
@@ -138,7 +153,7 @@
   window.dgSyncVisionCamera=stream=>{
     current=stream;video.hidden=!stream;el('homographyCameraHint').hidden=Boolean(stream);
     if(stream){video.srcObject=stream;void video.play().catch(()=>{el('homographyStatus').textContent='카메라 미리보기를 재생할 수 없습니다.';});dimensions();}
-    else{video.pause();video.srcObject=null;picking=false;render();}
+    else{video.pause();video.srcObject=null;picking=false;el('controlCoordinateReadout').hidden=true;render();}
   };
   source.addEventListener('loadedmetadata',dimensions);source.addEventListener('resize',dimensions);
   svg.addEventListener('click',e=>{
@@ -177,7 +192,7 @@
   function apply(data,part=null){
     const h=data.homography,a=data.aruco;revision=data.revision;ready=true;
     if(!part||part==='homography'){
-    savedHomography=JSON.parse(JSON.stringify(h));
+    savedHomography=JSON.parse(JSON.stringify(h));savedMatrix=data.homography_matrix??null;el('controlCoordinateReadout').hidden=true;
     points=h.image_points;worldPoints=h.world_points||points.map(()=>({x:null,y:null}));imageSize=h.image_size;fitReport=data.homography_report||null;
     el('homographyEnabled').checked=h.enabled;el('poolWidth').value=h.pool_width_m??'';el('poolHeight').value=h.pool_height_m??'';el('poolFrame').value=h.frame_id;
     el('homographyStatus').textContent=h.enabled?'저장된 호모그래피 설정을 불러왔습니다.':'호모그래피가 꺼져 있습니다.';
@@ -189,6 +204,7 @@
     savedAruco=JSON.stringify(aruco());
     el('arucoStatus').textContent=a.enabled?'저장된 설정: ArUco 검출 사용. 현재 영상의 검출 여부는 영상 확인으로 확인하세요.':'저장된 설정: ArUco 검출 사용 안 함.';
     }
+    window.dgSetLiveArucoConfiguration?.({revision:data.revision,homography:data.homography,aruco:data.aruco,homography_matrix:data.homography_matrix??null});
     el('cameraConfigurationStatus').textContent=appliedRevision===revision?`카메라 설정 v${revision} · 추적 서버 적용 확인`:`저장된 카메라 설정 v${revision}`;
     render();
   }

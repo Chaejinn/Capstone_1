@@ -277,3 +277,19 @@ body{overflow-x:auto!important}
 
 #startBtn[hidden],#simulateDepartureBtn[hidden]{display:none;}
 #homographyControlGroup{pointer-events:none;}
+
+#liveMarkerOverlay{position:absolute;z-index:3;pointer-events:none;inset:0;width:100%;height:100%;}
+#liveMarkerReadout{position:absolute;z-index:6;right:12px;top:12px;max-width:80%;padding:8px 10px;white-space:pre-line;background:rgba(0,13,25,.8);color:#8df8ff;border:1px solid #2b6470;border-radius:4px;font-size:12px;pointer-events:none;}
+#liveMarkerOverlay[hidden],#liveMarkerReadout[hidden]{display:none;}
+
+.settings-right-stack{display:flex;flex-direction:column;gap:16px;min-width:0;}
+.signal-command-buttons{flex-wrap:wrap;}
+.signal-state{white-space:pre-wrap;overflow-wrap:anywhere;font-size:11px;color:var(--text-2);}
+.signal-history{max-height:180px;overflow:auto;font-size:11px;padding-left:18px;color:var(--text-2);}
+.signal-history li{padding:5px 0;}
+#signalTargetFields[hidden],#signalAutoStop[hidden]{display:none;}
+#controlCoordinateReadout{position:absolute;z-index:6;bottom:40px;left:12px;padding:6px 9px;background:rgba(0,13,25,.8);color:#ffd166;border:1px solid #8c7343;border-radius:4px;font-size:12px;pointer-events:none;}
+#controlCoordinateReadout[hidden]{display:none;}
+
+.signal-wide-host{grid-column:1/-1;}
+#signalWideHost[hidden],#signalSideHost[hidden]{display:none;}

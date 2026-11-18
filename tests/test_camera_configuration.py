@@ -74,6 +74,11 @@ class ConfigurationTests(unittest.TestCase):
         initial=self.get().json();self.assertFalse(initial['homography']['enabled']);self.assertFalse(initial['aruco']['enabled'])
         saved=self.put('homography',self.homography)
         self.assertEqual(saved.status_code,200,saved.text);self.assertEqual(saved.json()['revision'],1)
+        matrix=saved.json()['homography_matrix'];self.assertEqual(len(matrix),3)
+        self.assertEqual(len(matrix[0]),3)
+        import numpy as np
+        center=np.array(matrix)@np.array([50.,50.,1.]);self.assertAlmostEqual(center[0]/center[2],.4)
+        self.assertAlmostEqual(center[1]/center[2],.4)
         calibration_id=saved.json()['homography']['calibration_id']
         marker=self.put('aruco',{'enabled':True,'marker_id':3,'marker_size_m':.1})
         self.assertEqual(marker.status_code,200,marker.text)

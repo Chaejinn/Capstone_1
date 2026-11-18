@@ -42,6 +42,7 @@
     if(stream) stream.getTracks().forEach(track => {track.onended = null; track.stop();});
     stream = null;
     video.pause(); video.srcObject = null; video.hidden = true;
+    window.dgSyncLiveAruco?.(null);
     window.dgSyncRoiCamera?.(null);
     window.dgSyncVisionCamera?.(null);
     clearBoxes(); overlay.hidden = true;
@@ -82,6 +83,7 @@
     el('aiResultPanel').hidden = false;
     el('aiResultPlaceholder').hidden = true;
     const now=Date.now();if(previousResultAt!==null)resultIntervalMs=now-previousResultAt;previousResultAt=now;
+    window.dgUpdateLiveTargets?.(data);
     resultCapturedAt = new Date(data.captured_at || pendingFrame.capturedAt);
     resultInferenceMs = data.inference_ms || 0;
     updateResultTime();
@@ -194,6 +196,7 @@
       stream.getVideoTracks().forEach(track => {track.onended=()=>{if(run===generation){disconnect();el('cameraStatus').textContent='카메라 연결이 종료되었습니다.';}};});
       pauseSim(); window.dgCameraLive = true; updateSimControls();
       video.hidden = false; overlay.hidden = true;
+      window.dgSyncLiveAruco?.(stream);
       window.dgSyncRoiCamera?.(stream);
       window.dgSyncVisionCamera?.(stream);
       resultClock = setInterval(updateResultTime,1000);
@@ -227,6 +230,7 @@
   window.dgRestartCameraTracking=()=>{
     if(!stream)return;
     stopDeparture();departureStatus='';
+    window.dgUpdateLiveTargets?.(null);
     generation++;clearTimeout(timer);controller?.abort();
     closeTracking(trackingId);trackingId=null;pendingFrame=null;lastResult=0;previousResultAt=null;resultIntervalMs=null;
     el('aiResultPanel').hidden=true;

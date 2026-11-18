@@ -28,11 +28,17 @@ def configuration(db,site_id,for_update=False):
     return key,row,(CameraConfiguration.model_validate_json(row.payload_json) if row else CameraConfiguration())
 
 
+def configuration_view(value):
+    matrix,report=fit_homography(value.homography) if value.homography.enabled else (None,None)
+    return {**value.model_dump(mode='json'),'homography_report':report,
+            'homography_matrix':matrix.tolist() if matrix is not None else None}
+
+
 @router.get('/configuration')
 def read(identity=Depends(scope),db:Session=Depends(get_db)):
     from fastapi.responses import JSONResponse
     _,_,value=configuration(db,identity[1])
-    return JSONResponse({**value.model_dump(mode='json'),'homography_report':homography_report(value.homography)},headers={'Cache-Control':'no-store'})
+    return JSONResponse(configuration_view(value),headers={'Cache-Control':'no-store'})
 
 
 def save(db,identity,part,value,admin):
@@ -47,7 +53,7 @@ def save(db,identity,part,value,admin):
         db.rollback()
         raise HTTPException(409,'동시에 설정을 저장했습니다. 새로 조회한 뒤 다시 저장하세요.') from None
     audit_log(db,actor=admin.username,action=f'카메라 {part} 설정 변경: site={identity[1]} revision={current.revision}')
-    return {**current.model_dump(mode='json'),'homography_report':homography_report(current.homography)}
+    return configuration_view(current)
 
 
 @router.post('/configuration/homography/validate')
