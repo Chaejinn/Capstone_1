@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/common.css">
-<link rel="stylesheet" href="css/dashboard.css?v=square-roi-1">
+<link rel="stylesheet" href="css/dashboard.css?v=live-controls-1">
 <style>body{overflow:hidden; height:100vh;}</style>
 </head>
 <body>
@@ -73,6 +73,7 @@
             </div>
             <svg id="roiSvgControl" viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute; inset:0; width:100%; height:100%; z-index:2; pointer-events:none;">
               <polygon id="roiPolyControl" points="" fill="rgba(141,160,188,0.05)" stroke="rgba(141,160,188,0.5)" stroke-width="0.4" stroke-dasharray="2,1.5"/>
+              <g id="homographyControlGroup" aria-label="저장된 호모그래피 보정 영역"></g>
             </svg>
             <div id="targetBox" class="det-box" style="display:none;">
               <span class="lbl" id="targetLbl">후보</span>
@@ -98,10 +99,11 @@
             <form id="cameraForm" class="sim-controls">
               <button class="btn primary" id="cameraConnectBtn" type="submit">카메라 연결</button>
               <button class="btn" id="cameraDisconnectBtn" type="button" disabled>연결 해제</button>
-              <button class="btn" id="simulateDepartureBtn" type="button">모의 익수 판정 · 실제 보드 0.8초 출동</button>
+              <button class="btn" id="simulateDepartureBtn" type="button">모의 익수판정</button>
             </form>
             <p id="cameraStatus" role="status"></p>
             <p id="cameraConfigurationStatus" role="status"></p>
+            <p id="homographyControlStatus" role="status"></p>
           </details>
 
 
@@ -303,6 +305,6 @@
 </div>
 
 <script src="js/auth.js?v=calibration-validation-1"></script>
-<script src="js/bootstrap.js?v=camera-unified-4" data-scripts="js/dashboard.js?v=large-square-roi-2,js/analysis-layout.js?v=single-camera-1,js/roi-camera.js?v=square-roi-1,js/vision-settings.js?v=independent-check-1,js/camera.js?v=inference-diagnostics-1"></script>
+<script src="js/bootstrap.js?v=camera-unified-4" data-scripts="js/dashboard.js?v=live-controls-1,js/analysis-layout.js?v=single-camera-1,js/roi-camera.js?v=square-roi-1,js/vision-settings.js?v=control-homography-1,js/camera.js?v=live-controls-1"></script>
 </body>
 </html>

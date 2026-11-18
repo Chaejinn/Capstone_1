@@ -350,6 +350,8 @@ function cancelDispatch(){
 /* ---------------- SIM CORE ---------------- */
 function updateSimControls(){
   const startBtn = document.getElementById('startBtn');
+  startBtn.hidden=Boolean(window.dgCameraLive);
+  document.getElementById('simulateDepartureBtn').hidden=Boolean(window.dgCameraLive);
   startBtn.textContent = state.paused ? '▶ 재개' : '▶ 시뮬레이션 시작';
   startBtn.disabled = window.dgCameraLive || state.estop || state.running || state.phase==='COMPLETE';
   document.getElementById('simEstopBtn').disabled = state.estop;

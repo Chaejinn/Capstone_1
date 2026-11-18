@@ -205,6 +205,7 @@
   });
   el('cameraDisconnectBtn').addEventListener('click',disconnect);
   el('simulateDepartureBtn').addEventListener('click',async()=>{
+    if(stream||window.dgCameraLive)return;
     const button=el('simulateDepartureBtn');
     if(state.estop){el('cameraStatus').textContent='비상정지 상태입니다. 브릿지를 다시 시작하세요.';return;}
     button.disabled=true;

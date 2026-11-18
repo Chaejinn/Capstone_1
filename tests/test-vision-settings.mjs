@@ -68,6 +68,11 @@ assert.equal(settings.revision,0);assert.equal(restarts,0);
 
 element('homographySaveBtn').handlers.click();await flush();
 assert.equal(restarts,1);assert.equal(element('arucoId').value,'3','Saving homography preserves unsaved marker inputs');
+assert.ok(element('homographyControlGroup').children.some(node=>node.textContent==='+X'));
+assert.ok(element('homographyControlGroup').children.some(node=>node.textContent==='+Y'));
+assert.match(element('homographyControlStatus').textContent,/호모그래피 표시 중/);
+const savedOverlayCount=element('homographyControlGroup').children.length;
+
 const saved=calls.find(call=>call.path.includes('/configuration/homography'));
 assert.equal(saved.options.body.image_points[0].x,10);assert.equal(saved.options.body.image_points[0].y,10);
 assert.equal(saved.options.body.image_size[0],1280);assert.equal(saved.options.body.pool_width_m,.8);
@@ -104,3 +109,11 @@ assert.equal(calls.length,beforeInvalid,'Invalid physical dimensions are rejecte
 assert.match(element('homographyStatus').textContent,/0보다 크게/);
 assert.match(element('homographyImageSize').textContent,/1280 × 720 px/);
 assert.match(element('homographyImageSize').textContent,/960 × 540 px/);
+
+// Unsaved edits never replace the active calibration on the control image.
+assert.ok(element('homographyControlGroup').children.length>=savedOverlayCount);
+context.window.dgSyncVisionCamera(stream);
+element('localCameraFeed').videoWidth=720;element('localCameraFeed').videoHeight=1280;
+element('localCameraFeed').handlers.resize();
+assert.equal(element('homographyControlGroup').children.length,0);
+assert.match(element('homographyControlStatus').textContent,/영상 비율이 달라/);

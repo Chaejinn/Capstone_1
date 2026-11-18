@@ -17,7 +17,7 @@ async function scenario({result, error, serverError, deferredCamera=false}){
   const stream={getTracks:()=>[track],getVideoTracks:()=>[track]};
   const context=vm.createContext({document:{getElementById:element,createElement:()=>element('capture')},
     window:{addEventListener(){},location:{search:"?site=chunjeon"}},navigator:{mediaDevices:{getUserMedia:()=>deferredCamera?new Promise(resolve=>{pendingCamera=resolve;}):Promise.resolve(stream)}},
-    updateSimControls(){},pauseSim(){},dgGetSession:()=>({id:'operator'}),
+    state:{paused:false,estop:false,running:false,phase:'IDLE'},pauseSim(){},dgGetSession:()=>({id:'operator'}),
     dgApi:async(path,options={})=>{
       calls.push({path,options});
       if(path.startsWith('/vision/streams?')) return {stream_id:'session-one'};
@@ -26,6 +26,8 @@ async function scenario({result, error, serverError, deferredCamera=false}){
     },
     AbortController,FormData,Blob,Number,Math,URLSearchParams,
     setTimeout(fn,delay){const id=timers.size+1;timers.set(id,{fn,delay});return id;},clearTimeout(id){timers.delete(id);},setInterval(fn,delay){const id=intervals.size+1;intervals.set(id,{fn,delay});return id;},clearInterval(id){intervals.delete(id);}});
+  const dashboard=readFileSync('code/js/dashboard.js','utf8');
+  vm.runInContext(dashboard.slice(dashboard.indexOf('function updateSimControls(){'),dashboard.indexOf('function startSim(){')),context);
   vm.runInContext(readFileSync('code/js/camera.js','utf8'),context);
   const start=element('cameraForm').handlers.submit({preventDefault(){}});
   if(deferredCamera){element('cameraDisconnectBtn').handlers.click();pendingCamera(stream);}
@@ -40,6 +42,11 @@ assert.ok(live.texts.some(text=>text.includes('ID 0-42')));
 assert.ok(live.texts.some(text=>text.includes('연속 0/15')));
 assert.ok(live.calls[1].options.body.get('image') instanceof Blob);
 assert.equal(live.elements.get('cameraBadge').textContent,'CAM LIVE');
+assert.equal(live.elements.get('startBtn').hidden,true);
+assert.equal(live.elements.get('simulateDepartureBtn').hidden,true);
+const beforeSimulation=live.calls.length;
+await live.elements.get('simulateDepartureBtn').handlers.click();
+assert.equal(live.calls.length,beforeSimulation,'Live camera blocks simulated departure');
 assert.equal(live.elements.get('localCameraFeed').hidden,false);
 assert.equal(live.elements.get('aiResultPanel').hidden,false);
 assert.equal(live.elements.get('aiResultPlaceholder').hidden,true);
@@ -75,3 +82,8 @@ assert.match(cold.elements.get('cameraStatus').textContent,/자동 재시도/);
 assert.equal(cold.elements.get('localCameraFeed').hidden,false);
 assert.equal(cold.stopped(),false);
 assert.ok([...cold.timers.values()].some(timer=>timer.delay===1000));
+
+const toggled=await scenario({result:{image_size:[640,480],detections:[]}});
+toggled.disconnect();
+assert.equal(toggled.elements.get('startBtn').hidden,false);
+assert.equal(toggled.elements.get('simulateDepartureBtn').hidden,false);

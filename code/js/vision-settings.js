@@ -5,7 +5,7 @@
   const query='?site_id='+encodeURIComponent(site||'');
   const video=el('homographyCameraFeed'), source=el('localCameraFeed'), svg=el('homographySvg');
   let current=null, points=[], worldPoints=[], fitReport=null, imageSize=null, picking=false, revision=0, ready=false, appliedRevision=null;
-  let checkPoint=null;
+  let checkPoint=null,savedHomography=null;
   const admin=dgGetSession()?.role==='admin';
   const number=id=>el(id).value.trim()===''?null:Number(el(id).value);
   function worldCoordinates(){
@@ -96,7 +96,36 @@
     const r=svg.getBoundingClientRect();
     return {x:Math.max(0,Math.min(100,(e.clientX-r.left)/r.width*100)),y:Math.max(0,Math.min(100,(e.clientY-r.top)/r.height*100))};
   }
+  function renderControlHomography(){
+    const group=el('homographyControlGroup'),status=el('homographyControlStatus');
+    group.replaceChildren();
+    const h=savedHomography;
+    if(!h?.enabled||!h.image_size||h.image_points.length<4){
+      status.textContent='호모그래피 미설정 · 설정에서 저장하면 보정 영역과 X·Y축이 표시됩니다.';return;
+    }
+    if(current&&source.videoWidth&&Math.abs((source.videoWidth/source.videoHeight)/(h.image_size[0]/h.image_size[1])-1)>.01){
+      status.textContent='호모그래피 표시 중단 · 영상 비율이 달라 재보정이 필요합니다.';return;
+    }
+    const add=(tag,attrs,text)=>{
+      const node=document.createElementNS('http://www.w3.org/2000/svg',tag);
+      for(const [name,value] of Object.entries(attrs))node.setAttribute(name,value);
+      if(text)node.textContent=text;group.appendChild(node);
+    };
+    const p=h.image_points,corners=p.slice(0,4);
+    add('polygon',{points:corners.map(v=>`${v.x},${v.y}`).join(' '),fill:'rgba(255,209,102,.06)',stroke:'#ffd166','stroke-width':'.6','stroke-dasharray':'1.2,1'});
+    const origin=p[3];
+    for(const [end,label] of [[p[2],'+X'],[p[0],'+Y']]){
+      const dx=end.x-origin.x,dy=end.y-origin.y,length=Math.hypot(dx,dy);if(length<1e-6)continue;
+      const ux=dx/length,uy=dy/length;
+      add('path',{d:`M ${origin.x} ${origin.y} L ${end.x} ${end.y} M ${end.x-ux*3-uy*1.5} ${end.y-uy*3+ux*1.5} L ${end.x} ${end.y} L ${end.x-ux*3+uy*1.5} ${end.y-uy*3-ux*1.5}`,fill:'none',stroke:'#ffd166','stroke-width':'.6'});
+      add('text',{x:Math.max(2,Math.min(91,(origin.x+end.x)/2+2)),y:Math.max(4,Math.min(96,(origin.y+end.y)/2-2)),fill:'#ffd166','font-size':'3'},label);
+    }
+    p.forEach((point,i)=>add('circle',{cx:point.x,cy:point.y,r:i<4?'.9':'.6',fill:'#ffd166'}));
+    add('text',{x:Math.max(2,Math.min(75,p[0].x+2)),y:Math.max(4,p[0].y-2),fill:'#ffd166','font-size':'2.6'},'호모그래피');
+    status.textContent=`호모그래피 표시 중 · 노란 점선: 보정 영역·X/Y축 · ROI는 별도 표시 · 기준점 ${p.length}개`;
+  }
   function dimensions(){
+    renderControlHomography();
     const w=source.videoWidth,h=source.videoHeight;
     const saved=imageSize?`${imageSize[0]} × ${imageSize[1]} px`:'미지정';
     const upload=w?`${Math.min(960,w)} × ${Math.round(h*Math.min(960,w)/w)} px`:'대기';
@@ -148,6 +177,7 @@
   function apply(data,part=null){
     const h=data.homography,a=data.aruco;revision=data.revision;ready=true;
     if(!part||part==='homography'){
+    savedHomography=JSON.parse(JSON.stringify(h));
     points=h.image_points;worldPoints=h.world_points||points.map(()=>({x:null,y:null}));imageSize=h.image_size;fitReport=data.homography_report||null;
     el('homographyEnabled').checked=h.enabled;el('poolWidth').value=h.pool_width_m??'';el('poolHeight').value=h.pool_height_m??'';el('poolFrame').value=h.frame_id;
     el('homographyStatus').textContent=h.enabled?'저장된 호모그래피 설정을 불러왔습니다.':'호모그래피가 꺼져 있습니다.';
