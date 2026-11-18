@@ -22,6 +22,14 @@ class VisionDiagnosticTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn('2.768s', caught.exception.detail)
         self.assertIn('123.4ms', caught.exception.detail)
 
+    async def test_future_frame_identifies_pc_clock_sync(self):
+        with self.assertRaises(HTTPException) as caught:
+            await self.call(422, {'detail':'stale/future browser frame; observed_age_seconds=-0.953; limit=2; synchronize clocks'})
+        self.assertEqual(caught.exception.status_code,422)
+        self.assertIn('-0.953s',caught.exception.detail)
+        self.assertIn('PC의 시계가 서버보다 빠릅니다',caught.exception.detail)
+        self.assertIn('지금 동기화',caught.exception.detail)
+
     async def test_arbitrary_error_body_is_not_exposed(self):
         with self.assertRaises(HTTPException) as caught:
             await self.call(422, {'detail':'private-test-key remote traceback'})

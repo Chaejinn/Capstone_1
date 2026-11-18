@@ -64,6 +64,10 @@ async def forward(path, method, identity, body=None, content_type=None):
                     if match:
                         message = ('프레임 촬영 시각 검증 실패: 도착 시 나이 %ss, 허용 %ss; 인증·사이트 %.1fms, 추적 서버 왕복 %.1fms'
                                    % (match[1], match[2], identity[2]['auth_site_ms'], elapsed))
+                        if float(match[1]) < -0.5:
+                            message += ' · 촬영 PC의 시계가 서버보다 빠릅니다. Windows 날짜 및 시간에서 자동 시간 설정을 켜고 지금 동기화한 뒤 카메라를 다시 연결하세요.'
+                        else:
+                            message += ' · 촬영 시각과 전송 지연을 확인하세요. PC 시간 동기화 및 네트워크 상태 확인이 필요합니다.'
                     elif detail in ('Frame ID or image dimensions are invalid', 'frame_id must strictly increase within a stream', 'UTC timestamp required'):
                         message += ': ' + detail
             raise HTTPException(response.status_code if response.status_code in (404, 413, 422, 429) else 502,
