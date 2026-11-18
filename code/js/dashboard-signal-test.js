@@ -13,7 +13,7 @@
     const isUsb=mode.value==='usb';mode.disabled=busy;el('signalTargetFields').hidden=isUsb;
     el('signalBridgeHelp').textContent=isUsb
       ? 'USB는 직진 10%·최대 0.8초 시험과 정지를 지원합니다. 조향·구조망·복귀는 아직 연결되지 않았습니다.'
-      : 'signal_bridge.py 연결 시 실제 보드로 전달됩니다. 출동 신호 후 정지 신호가 필요하며, 복귀 신호는 현재 정지만 수행합니다.';
+      : 'HC-06 브릿지 연결 시 실제 보드로 전달됩니다. 출동 신호 후 정지 신호가 필요하며, 복귀 신호는 현재 정지만 수행합니다.';
     for(const button of buttons){
       const cmd=button.dataset.signalCommand;
       button.disabled=(busy&&cmd!=='ESTOP')||(isUsb&&!['DISPATCH','ESTOP','CANCEL'].includes(cmd))||

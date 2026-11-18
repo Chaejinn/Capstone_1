@@ -2,10 +2,10 @@
 
 설치: python -m pip install requests pyserial
 환경변수: DG_BRIDGE_TOKEN (JWT 또는 Bearer JWT), DG_BRIDGE_PORT (Windows 기본 COM4)
-포트 조회: python signal_bridge.py --list-ports
-웹 연결 확인: python signal_bridge.py --check-web
-Mac 실행: python signal_bridge.py --port /dev/cu.HC-06…
-테스트: python signal_bridge.py --dry-run
+포트 조회: python hardware/bridges/hc06_bridge.py --list-ports
+웹 연결 확인: python hardware/bridges/hc06_bridge.py --check-web
+Mac 실행: python hardware/bridges/hc06_bridge.py --port /dev/cu.HC-06…
+테스트: python hardware/bridges/hc06_bridge.py --dry-run
 RETURN은 현재 정지만 수행한다. CLEAR_ESTOP의 보드 해제 동작은 펌웨어 확인 필요.
 """
 import argparse

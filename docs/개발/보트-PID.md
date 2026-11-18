@@ -1,3 +1,9 @@
+# 개발 참고: 로컬 보트 PID API
+
+이 문서는 `backend/app/routers/boat.py`의 별도 LAN 제어 경로에 대한 개발 메모입니다.
+현재 관제의 USB 출동 브릿지와 자동으로 연결된 경로가 아닙니다. 실제 연결 안내는 [보드 연결](../보드연결.md)을 보세요.
+`bridge.py` 등 외부 장치 예시와 통신 규약은 하드웨어 담당자 확인이 필요합니다.
+
 # 실제 보트 LAN 연결
 
 단일 프로세스로 실행합니다. 메모리 명령 상태를 공유해야 하므로 --workers를 늘리지 마세요.
@@ -25,28 +31,3 @@ python bridge.py
 - POST `/api/boat/estop`, `/api/boat/estop/clear`: 대시보드 STOP/해제 연동.
 
 
-## HC-06 웹 신호 브릿지 (signal_bridge.py)
-
-위 LAN PID 브릿지와 별개로 웹 `/api/test-control` 버튼을 읽어 HC-06에 전달합니다.
-현재 RETURN은 정지 명령이며 좌표 기반 복귀·PID 조향을 수행하지 않습니다.
-
-macOS에서 준비:
-
-```sh
-python3 -m venv .venv-bridge
-.venv-bridge/bin/python -m pip install requests pyserial
-.venv-bridge/bin/python signal_bridge.py --list-ports
-```
-
-기존 PC 연결을 종료하고 Mac Bluetooth에서 HC-06을 페어링한 뒤 나타나는
-`/dev/cu.…` 송신 포트를 사용합니다. Bluetooth-Incoming-Port는 HC-06 전용 포트가 아닙니다.
-발급받은 현재 로그인 토큰은 `DG_BRIDGE_TOKEN` 환경변수에만 설정하며 소스에 저장하지 않습니다.
-
-```sh
-.venv-bridge/bin/python signal_bridge.py --check-web
-.venv-bridge/bin/python signal_bridge.py --port /dev/cu.HC-06-DevB --baud 9600
-```
-
-포트 이름은 예시입니다. 실제 `--list-ports` 결과를 사용합니다. `--check-web`은 장치를 열거나
-명령을 생성하지 않습니다. 실제 실행은 처음 정지 명령을 전송하고 이전 웹 명령은 건너뜁니다.
-웹 인증 실패·통신 단절·종료 시 정지하도록 구현되어 있습니다. 실제 보드 수신·정지 여부는 현장 검증이 필요합니다.

@@ -12,10 +12,14 @@ public/
 .env*
 local-model/
 /.local-signal-test/
-/SIGNAL_TEST.md
 Ai파일/local-model/
 Ai파일/받은원본/
 Ai파일/edge-vision/.venv/
 Ai파일/edge-vision/outputs/
 Ai파일/edge-vision/calibration/*.bak
 Ai파일/edge-vision/calibration/*.tmp
+
+# 재생성되는 배포 파일과 개발 캐시
+/dist/
+.pytest_cache/
+.venv-bridge/

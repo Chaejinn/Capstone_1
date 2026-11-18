@@ -12,7 +12,7 @@ from sqlalchemy.pool import StaticPool
 
 from backend.platform.database import Base, get_db
 from backend.platform.routers import board_control as control
-from scripts.dashboard_departure_bridge import Departure
+from hardware.bridges.usb_bridge import Departure
 
 
 class DepartureTests(unittest.TestCase):

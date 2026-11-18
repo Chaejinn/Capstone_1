@@ -47,7 +47,15 @@ class UnifiedServerTests(unittest.TestCase):
         self.assertEqual(self.client.post(base + '?site_id=chunjeon').status_code, 401)
         self.assertEqual(self.client.post(base + '?site_id=missing', headers=self.headers).status_code, 403)
         stream = '01234567-89ab-4cde-8fab-0123456789ab'
-        with patch.object(vision, 'forward', new_callable=AsyncMock, return_value={'stream_id': stream}) as forward:
+        async def tracking_reply(path, method, identity, body=None, content_type=None):
+            if method == 'POST':
+                import json
+                sent = json.loads(body)
+                return {'stream_id': stream, 'roi_filter_applied': True,
+                        'monitoring_roi': sent['monitoring_roi'],
+                        'configuration_revision': sent['configuration']['revision']}
+            return {'stream_id': stream}
+        with patch.object(vision, 'forward', new_callable=AsyncMock, side_effect=tracking_reply) as forward:
             result = self.client.post(base + '?site_id=chunjeon', headers=self.headers)
             self.assertEqual(result.status_code, 201)
             self.assertEqual(result.json()['stream_id'], stream)
