@@ -12,6 +12,8 @@ from sqlalchemy import Column, Float, Integer, String, Text
 from sqlalchemy.orm import Session
 
 from ..database import Base, get_db
+from ..models import Site
+from ..camera_configuration import MonitoringROI
 from .vision import forward, scope
 
 router = APIRouter(prefix='/board-control', tags=['board departure'])
@@ -130,6 +132,17 @@ async def dispatch(body: EvidenceInput, identity=Depends(scope), db: Session = D
     evidence_key = hashlib.sha256(
         f"{identity[0]}:{identity[1]}:{body.stream_id}:{item.get('track_generation')}:{item['track_id']}".encode()
     ).hexdigest()
+    site=db.get(Site,identity[1])
+    roi=MonitoringROI(points=site.roi()) if site else None
+    analysis=snapshot.get('analysis') or {}
+    size=analysis.get('image_size');box=item.get('bbox')
+    if (roi is None or analysis.get('roi_filter_applied') is not True
+            or analysis.get('monitoring_roi')!=roi.model_dump(mode='json')
+            or not isinstance(size,list) or len(size)!=2 or not all(type(n) in (int,float) and math.isfinite(n) and n>0 for n in size)
+            or not isinstance(box,list) or len(box)!=4 or not all(type(n) in (int,float) and math.isfinite(n) for n in box)
+            or not (0<=box[0]<box[2]<=size[0] and 0<=box[1]<box[3]<=size[1])
+            or not roi.includes_bbox(box,size)):
+        raise HTTPException(409,'현재 감시 ROI 안의 판정이 아닙니다. ROI 저장 후 카메라를 다시 연결하세요.')
     row = channel(db, identity[1])
     if row is None or row.lease_until <= time.time():
         raise HTTPException(409, 'Windows 출동 브릿지가 연결되지 않았습니다.')

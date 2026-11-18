@@ -102,7 +102,8 @@ class ConfigurationTests(unittest.TestCase):
         async def forward(path,method,identity,body=None,content_type=None):
             if method=='DELETE':return {'closed':True}
             sent=json.loads(body);self.assertTrue(sent['configuration']['homography']['enabled'])
-            return {'stream_id':'test-stream','configuration_revision':1}
+            self.assertEqual(sent['monitoring_roi'],{'points':[]})
+            return {'stream_id':'test-stream','configuration_revision':1,'roi_filter_applied':True,'monitoring_roi':sent['monitoring_roi']}
         with patch.object(vision,'forward',side_effect=forward):
             result=self.client.post('/api/vision/streams'+self.query)
             self.assertEqual(result.status_code,201,result.text)

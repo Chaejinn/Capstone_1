@@ -20,6 +20,8 @@ class DepartureTests(unittest.TestCase):
         self.engine=create_engine('sqlite://',connect_args={'check_same_thread':False},poolclass=StaticPool)
         Base.metadata.create_all(self.engine)
         self.sessions=sessionmaker(bind=self.engine)
+        with self.sessions() as db:
+            db.add(control.Site(id='site',name='Test',enabled=True));db.commit()
         app=FastAPI()
         app.include_router(control.router)
         def db():
@@ -30,7 +32,7 @@ class DepartureTests(unittest.TestCase):
         self.client=TestClient(app)
         self.bridge={'bridge_id':str(uuid4())}
         self.evidence={'stream_id':str(uuid4()),'frame_id':22}
-        self.analysis=dict(expired=False,frame_id=22,detections=[dict(
+        self.analysis=dict(expired=False,frame_id=22,image_size=[640,480],roi_filter_applied=True,monitoring_roi={'points':[]},detections=[dict(bbox=[200,150,400,350],
             confirmed=True,coordinate_valid=True,track_id=3,track_generation=1,
             confirmed_at=datetime.now(timezone.utc).isoformat(),consecutive_frames=15,
             drowning_score=.9,target_x_m=1.2,target_y_m=2.4)])
@@ -47,6 +49,14 @@ class DepartureTests(unittest.TestCase):
 
     def dispatch(self):
         return self.client.post('/board-control/dispatch',json=self.evidence)
+
+    def test_outside_or_previous_roi_evidence_cannot_depart(self):
+        self.connect()
+        self.analysis['detections'][0]['bbox']=[0,0,20,20]
+        self.assertEqual(self.dispatch().status_code,409)
+        self.analysis['detections'][0]['bbox']=[200,150,400,350]
+        self.analysis['monitoring_roi']={'points':[{'x':0,'y':0},{'x':100,'y':0},{'x':100,'y':100},{'x':0,'y':100}]}
+        self.assertEqual(self.dispatch().status_code,409)
 
     def test_no_bridge_blocks_and_server_fetches_its_own_evidence(self):
         self.assertEqual(self.dispatch().status_code,409)

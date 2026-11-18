@@ -7,6 +7,7 @@ from datetime import datetime
 from typing import List, Literal, Optional
 
 from pydantic import BaseModel, Field
+from .camera_configuration import MonitoringROI
 
 
 # ---------------- Auth ----------------
@@ -81,8 +82,8 @@ class RoiPoint(BaseModel):
     y: float
 
 
-class RoiUpdate(BaseModel):
-    points: List[RoiPoint]
+class RoiUpdate(MonitoringROI):
+    pass
 
 
 # ---------------- Settings ----------------

@@ -5,7 +5,7 @@
   const capture = document.createElement('canvas');
   let controller = null, stream = null, timer = null, generation = 0, frameId = 0;
   let trackingId = null, pendingFrame = null, lastResult = 0;
-  let resultClock = null, resultCapturedAt = null, resultInferenceMs = 0;
+  let resultClock = null, resultCapturedAt = null, resultInferenceMs = 0, previousResultAt=null, resultIntervalMs=null;
   const issuedDepartures = new Set();
   let departureStatus = '';
   function stopDeparture(){
@@ -14,7 +14,8 @@
   function updateResultTime(){
     if(!resultCapturedAt) return;
     const age = Math.max(0,(Date.now()-resultCapturedAt.getTime())/1000);
-    el('aiResultInfo').textContent = `촬영 ${resultCapturedAt.toLocaleTimeString('ko-KR',{hour12:false})} · ${age.toFixed(1)}초 전 · 분석 ${(resultInferenceMs/1000).toFixed(1)}초`;
+    const cadence=resultIntervalMs?` · 갱신 ${(resultIntervalMs/1000).toFixed(1)}초 (${(1000/resultIntervalMs).toFixed(2)} fps)`:'';
+    el('aiResultInfo').textContent = `촬영 ${resultCapturedAt.toLocaleTimeString('ko-KR',{hour12:false})} · ${age.toFixed(1)}초 전 · 분석 ${(resultInferenceMs/1000).toFixed(1)}초${cadence}`;
   }
   const siteId = new URLSearchParams(window.location.search).get('site');
   function path(suffix){
@@ -32,7 +33,7 @@
     generation++;
     closeTracking(trackingId); trackingId = null; pendingFrame = null; lastResult = 0;
     clearTimeout(timer);
-    clearInterval(resultClock); resultClock = null; resultCapturedAt = null;
+    clearInterval(resultClock); resultClock = null; resultCapturedAt = null;previousResultAt=null;resultIntervalMs=null;
     el('aiResultPanel').hidden = true;
     el('aiResultPlaceholder').hidden = false;
     el('aiResultInfo').textContent = '분석 결과 대기';
@@ -80,6 +81,7 @@
     window.dgDrawMarker?.(context,data.marker_observation);
     el('aiResultPanel').hidden = false;
     el('aiResultPlaceholder').hidden = true;
+    const now=Date.now();if(previousResultAt!==null)resultIntervalMs=now-previousResultAt;previousResultAt=now;
     resultCapturedAt = new Date(data.captured_at || pendingFrame.capturedAt);
     resultInferenceMs = data.inference_ms || 0;
     updateResultTime();
@@ -117,6 +119,7 @@
     if(run !== generation || !stream) return;
     const request = new AbortController(); controller = request;
     const timeout = setTimeout(() => request.abort(), 60000);
+    let nextDelay=1000;
     try{
       if(!siteId) throw new Error('사이트 선택 화면에서 사이트를 선택한 뒤 연결하세요.');
       if(!trackingId){
@@ -142,7 +145,7 @@
         await dgApi(path('/' + trackingId + '/frames'),{method:'POST',body,signal:request.signal});
         if(run !== generation) return;
       }
-      const snapshot = await dgApi(path('/' + trackingId + '/results'),{signal:request.signal});
+      const snapshot = await dgApi(path('/' + trackingId + '/results')+'&after_frame_id='+lastResult+'&wait_ms=1500',{signal:request.signal});
       if(run !== generation) return;
       if(snapshot.last_error){
         const descriptions={
@@ -159,10 +162,12 @@
         draw(result); overlay.hidden = false;
         lastResult = result.frame_id; pendingFrame = null;
         await dispatchConfirmed(result,run);
+        nextDelay=0;
       }else if(Date.now() - pendingFrame.started > 65000){
         throw new Error('추적 분석 시간이 초과되었습니다.');
       }else{
         el('cameraStatus').textContent = 'AI 추적 분석 중…';
+        nextDelay=0;
       }
     }catch(error){
       if(run !== generation) return;
@@ -173,7 +178,7 @@
       if(!dgGetSession()){disconnect();el('cameraStatus').textContent='세션이 만료되었습니다. 다시 로그인하세요.';return;}
     }finally{
       clearTimeout(timeout);
-      if(run === generation && stream) timer = setTimeout(() => analyze(run),pendingFrame ? 700 : 1000);
+      if(run === generation && stream) timer = setTimeout(() => analyze(run),nextDelay);
     }
   }
   el('cameraForm').addEventListener('submit',async event => {
@@ -223,7 +228,7 @@
     if(!stream)return;
     stopDeparture();departureStatus='';
     generation++;clearTimeout(timer);controller?.abort();
-    closeTracking(trackingId);trackingId=null;pendingFrame=null;lastResult=0;
+    closeTracking(trackingId);trackingId=null;pendingFrame=null;lastResult=0;previousResultAt=null;resultIntervalMs=null;
     el('aiResultPanel').hidden=true;
     el('cameraStatus').textContent='설정 변경으로 추적 판정을 새로 시작합니다.';
     void analyze(generation);

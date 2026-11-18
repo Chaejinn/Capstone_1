@@ -190,7 +190,8 @@ async function saveRoi(){
     state.roiIsDefault=false;
     state.roi = saved.points; dgData.roi = saved.points;
     renderRoi();
-    showToast('감시 구역이 저장됐습니다.');
+    window.dgRestartCameraTracking?.();
+    showToast('감시 구역이 저장됐습니다. 새 ROI로 추적 판정을 시작합니다.');
   } catch(error){showToast(error.message);}
 }
 

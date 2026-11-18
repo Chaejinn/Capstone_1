@@ -22,12 +22,14 @@ import time
 from uuid import uuid4
 
 import cv2
+import numpy as np
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, UploadFile, Query
 from pydantic import BaseModel, Field
 import yaml
 
 from src.drowning_gate import DrowningGate
+from src.camera_configuration import MonitoringROI
 from src.flow.settings import PipelineSettings
 from src.flow.detection.tracking import PersonTracker
 from src.modal_api import _decode_image, MAX_IMAGE_BYTES
@@ -77,8 +79,10 @@ class BrowserStream:
         max_frame_age=2,
         pose_max_age=0.25,
         analysis_max_age=30,
+        monitoring_roi=None,
         clock_tolerance_seconds=0.5,
     ):
+        self.monitoring_roi=monitoring_roi
         self.owner, self.site_id, self.camera_id = owner, site_id, camera_id
         self.predictor, self.calibration, self.locator = predictor, calibration, locator
         self.tracker_factory = tracker_factory
@@ -160,6 +164,8 @@ class BrowserStream:
                 or not (0 <= box[0] < box[2] <= size[0] and 0 <= box[1] < box[3] <= size[1])
             ):
                 raise ValueError("invalid original-image bbox")
+            if self.monitoring_roi is not None and not self.monitoring_roi.includes_bbox(box,size):
+                continue
             if detection.get("water_state") not in ("SWIMMING", "DROWNING", "UNCLEAR"):
                 raise ValueError("invalid raw VLM state")
             score = detection.get("confidence")
@@ -256,6 +262,8 @@ class BrowserStream:
             "detections": decorated,
             "camera_owner": "browser",
             "tracking_method": "ByteTrack on inference frames" if self.tracker else "none",
+            "roi_filter_applied":self.monitoring_roi is not None,
+            "monitoring_roi":self.monitoring_roi.model_dump(mode="json") if self.monitoring_roi is not None else None,
             "control_commands_generated": False,
         }
 
@@ -278,7 +286,15 @@ class BrowserStream:
                 if time.time() - frame.captured_at > self.max_frame_age:
                     self.strict_gate = DrowningGate(max_gap_seconds=self.max_tracking_gap)
                     continue
-                result = self.predictor.predict(frame)
+                inference_frame=frame
+                if self.monitoring_roi is not None:
+                    height,width=frame.image.shape[:2]
+                    polygon=self.monitoring_roi.polygon_for_size(width,height)
+                    contour=np.array([[round(x*width/100),round(y*height/100)] for x,y in polygon],dtype=np.int32)
+                    mask=np.zeros((height,width),np.uint8);cv2.fillPoly(mask,[contour],255)
+                    masked=cv2.bitwise_and(frame.image,frame.image,mask=mask);masked.flags.writeable=False
+                    inference_frame=Frame(frame.frame_id,frame.captured_at,frame.monotonic,masked)
+                result = self.predictor.predict(inference_frame)
                 inferred_at = time.time()
                 if self.stop.is_set():
                     break
@@ -374,6 +390,7 @@ class BrowserStream:
 
 
 class OpenStream(BaseModel):
+    monitoring_roi: MonitoringROI | None = None
     configuration: dict | None = None
     camera_id: str = Field(min_length=1, max_length=80)
 
@@ -500,9 +517,12 @@ def create_browser_app(
                 profile[1] if profile else BoardLocator(calibration, aruco_config),
                 tracker_factory=tracker_factory,
                 stabilization=stabilization,
+                monitoring_roi=body.monitoring_roi,
             )
         return {"stream_id": stream_id, "camera_id": body.camera_id, "camera_owner": "browser",
-                "configuration_revision": profile[2] if profile else None}
+                "configuration_revision": profile[2] if profile else None,
+                "roi_filter_applied":body.monitoring_roi is not None,
+                "monitoring_roi":body.monitoring_roi.model_dump(mode="json") if body.monitoring_roi is not None else None}
 
     @app.post("/v1/streams/{stream_id}/frames")
     async def upload(
@@ -531,8 +551,13 @@ def create_browser_app(
             raise HTTPException(422, str(exc)) from None
 
     @app.get("/v1/streams/{stream_id}/results")
-    def results(stream_id: str, scope=Depends(identity)):
-        return get_stream(stream_id, scope).snapshot()
+    async def results(stream_id: str, after_frame_id:int=Query(0,ge=0), wait_ms:int=Query(0,ge=0,le=1500), scope=Depends(identity)):
+        stream=get_stream(stream_id,scope);deadline=time.monotonic()+wait_ms/1000
+        while True:
+            snapshot=stream.snapshot();analysis=snapshot.get('analysis')
+            if snapshot.get('last_error') or (analysis and analysis['frame_id']>after_frame_id) or time.monotonic()>=deadline:
+                return snapshot
+            await asyncio.sleep(min(.05,max(0,deadline-time.monotonic())))
 
     @app.delete("/v1/streams/{stream_id}")
     async def close_stream(stream_id: str, scope=Depends(identity)):

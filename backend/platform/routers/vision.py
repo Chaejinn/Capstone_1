@@ -6,7 +6,7 @@ import time
 from uuid import UUID
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Query
 from sqlalchemy.orm import Session
 
 from .. import models
@@ -94,8 +94,14 @@ async def create(identity=Depends(scope),db:Session=Depends(get_db)):
     import json
     from .camera_settings import configuration
     _,_,value=configuration(db,identity[1])
-    payload={'camera_id':'camera-01','configuration':value.model_dump(mode='json')}
+    from ..camera_configuration import MonitoringROI
+    site=db.get(models.Site,identity[1])
+    roi=MonitoringROI(points=site.roi()).model_dump(mode='json')
+    payload={'camera_id':'camera-01','configuration':value.model_dump(mode='json'),'monitoring_roi':roi}
     opened=await forward('/v1/streams','POST',identity,json.dumps(payload).encode(),'application/json')
+    if opened.get('roi_filter_applied') is not True or opened.get('monitoring_roi')!=roi:
+        if opened.get('stream_id'):await forward('/v1/streams/'+opened['stream_id'],'DELETE',identity)
+        raise HTTPException(502,'추적 서버가 감시 ROI를 적용하지 못했습니다.')
     if (value.revision or value.homography.enabled or value.aruco.enabled) and opened.get('configuration_revision')!=value.revision:
         if opened.get('stream_id'):
             await forward('/v1/streams/'+opened['stream_id'],'DELETE',identity)
@@ -113,9 +119,9 @@ async def frames(stream_id: UUID, request: Request, identity=Depends(scope)):
 
 
 @router.get('/streams/{stream_id}/results')
-async def results(stream_id: UUID, identity=Depends(scope)):
+async def results(stream_id: UUID, after_frame_id:int=Query(0,ge=0), wait_ms:int=Query(0,ge=0,le=1500), identity=Depends(scope)):
     from fastapi.responses import JSONResponse
-    data = await forward(f'/v1/streams/{stream_id}/results', 'GET', identity)
+    data = await forward(f'/v1/streams/{stream_id}/results?after_frame_id={after_frame_id}&wait_ms={wait_ms}', 'GET', identity)
     return JSONResponse(data, headers={'Cache-Control': 'no-store'})
 
 

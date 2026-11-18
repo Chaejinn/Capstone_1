@@ -12,6 +12,35 @@ class Point(BaseModel):
     y: float = Field(ge=0,le=100)
 
 
+class MonitoringROI(BaseModel):
+    model_config=ConfigDict(extra='forbid')
+    points:list[Point]=Field(default_factory=list)
+
+    @model_validator(mode='after')
+    def polygon(self):
+        if not self.points:return self
+        xy=[(p.x,p.y) for p in self.points]
+        area=sum(a[0]*b[1]-b[0]*a[1] for a,b in zip(xy,xy[1:]+xy[:1]))
+        if len(xy)<3 or len(set(xy))!=len(xy) or abs(area)<1e-8:
+            raise ValueError('ROI는 서로 다른 기준점 3개 이상의 면적이 있는 다각형이어야 합니다.')
+        return self
+
+    def polygon_for_size(self,width,height):
+        if self.points:return [(p.x,p.y) for p in self.points]
+        side=min(width,height)*.88;dx=side/width*50;dy=side/height*50
+        return [(50-dx,50-dy),(50+dx,50-dy),(50+dx,50+dy),(50-dx,50+dy)]
+
+    def includes_bbox(self,box,size):
+        width,height=size
+        x=(box[0]+box[2])/2/width*100;y=(box[1]+box[3])/2/height*100
+        polygon=self.polygon_for_size(width,height);inside=False
+        for a,b in zip(polygon,polygon[1:]+polygon[:1]):
+            cross=(x-a[0])*(b[1]-a[1])-(y-a[1])*(b[0]-a[0])
+            if abs(cross)<1e-8 and min(a[0],b[0])-1e-8<=x<=max(a[0],b[0])+1e-8 and min(a[1],b[1])-1e-8<=y<=max(a[1],b[1])+1e-8:return True
+            if (a[1]>y)!=(b[1]>y) and x<(b[0]-a[0])*(y-a[1])/(b[1]-a[1])+a[0]:inside=not inside
+        return inside
+
+
 class WorldPoint(BaseModel):
     model_config = ConfigDict(extra='forbid',allow_inf_nan=False)
     x: float = Field(ge=0,le=10000)

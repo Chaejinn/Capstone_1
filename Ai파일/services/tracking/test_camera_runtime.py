@@ -71,6 +71,38 @@ class RuntimeTests(unittest.TestCase):
         self.assertTrue(result['coordinate_valid']);self.assertAlmostEqual(result['x_m'],.4,delta=.002)
         self.assertAlmostEqual(result['heading_deg'],105,delta=.1)
 
+    def test_roi_masks_model_input_filters_tracks_and_preserves_marker(self):
+        from src.flow.detection.tracking import PersonTracker
+        seen=[]
+        class Predictor:
+            def predict(inner,frame):
+                seen.append((bool(np.all(frame.image[5,5]==0)),bool(np.any(frame.image[200,300]))))
+                return {'frame_id':frame.frame_id,'image_size':[1280,720], 'inference_ms':1,'detections':[
+                    {'class':'human_dummy','confidence':.99,'water_state':'DROWNING','drowning_score':.9,'bbox':box}
+                    for box in ([200,200,400,400],[600,250,750,450])]}
+        roi={'points':[{'x':10,'y':10},{'x':40,'y':10},{'x':40,'y':90},{'x':10,'y':90}]}
+        app=create_browser_app(Predictor(),Calibration({}),{'marker_id':0},api_key='k'*40,
+            configuration_factory=create_profile,tracker_factory=lambda:PersonTracker(.3,.8,30))
+        with TestClient(app) as client:
+            opened=client.post('/v1/streams',headers=self.headers,json={'camera_id':'camera-01','configuration':self.settings,'monitoring_roi':roi})
+            self.assertEqual(opened.status_code,201,opened.text)
+            self.assertTrue(opened.json()['roi_filter_applied']);self.assertEqual(opened.json()['monitoring_roi'],roi)
+            path='/v1/streams/'+opened.json()['stream_id']
+            _,encoded=cv2.imencode('.jpg',self.image)
+            from datetime import datetime,timezone
+            sent=client.post(path+'/frames',headers=self.headers,files={'image':('frame.jpg',encoded.tobytes(),'image/jpeg')},data={
+                'frame_id':'1','captured_at':datetime.now(timezone.utc).isoformat(),'image_width':'1280','image_height':'720'})
+            self.assertEqual(sent.status_code,200,sent.text)
+            result=client.get(path+'/results?after_frame_id=0&wait_ms=1500',headers=self.headers).json()['analysis']
+            self.assertIsNotNone(result);self.assertEqual(seen,[(True,True)])
+            self.assertEqual(len(result['detections']),1)
+            self.assertEqual(result['detections'][0]['bbox'],[200.,200.,400.,400.])
+            self.assertTrue(result['marker_observation']['detected'],'Marker must use original, unmasked frame')
+            self.assertEqual(result['monitoring_roi'],roi)
+            self.assertFalse(result['control_commands_generated'])
+            self.assertEqual(client.get(path+'/results?wait_ms=1501',headers=self.headers).status_code,422)
+            client.delete(path,headers=self.headers)
+
     def test_full_stream_configuration_marker_render_and_diagnostic(self):
         class Predictor:
             def predict(self,frame):
