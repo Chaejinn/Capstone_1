@@ -111,23 +111,20 @@
       for(const [name,value] of Object.entries(attrs))node.setAttribute(name,value);
       if(text)node.textContent=text;group.appendChild(node);
     };
-    const p=h.image_points,corners=p.slice(0,4);
-    add('polygon',{points:corners.map(v=>`${v.x},${v.y}`).join(' '),fill:'rgba(255,209,102,.06)',stroke:'#ffd166','stroke-width':'.6','stroke-dasharray':'1.2,1'});
+    const p=h.image_points,corners=p.slice(0,4),color='#ff73df';
+    add('polygon',{points:corners.map(v=>`${v.x},${v.y}`).join(' '),fill:'none',stroke:color,'stroke-width':'3','stroke-dasharray':'8,6','vector-effect':'non-scaling-stroke'});
     const origin=p[3];
     for(const [end,label] of [[p[2],'+X'],[p[0],'+Y']]){
       const dx=end.x-origin.x,dy=end.y-origin.y,length=Math.hypot(dx,dy);if(length<1e-6)continue;
-      const ux=dx/length,uy=dy/length;
-      add('path',{d:`M ${origin.x} ${origin.y} L ${end.x} ${end.y} M ${end.x-ux*3-uy*1.5} ${end.y-uy*3+ux*1.5} L ${end.x} ${end.y} L ${end.x-ux*3+uy*1.5} ${end.y-uy*3-ux*1.5}`,fill:'none',stroke:'#ffd166','stroke-width':'.6'});
-      add('text',{x:Math.max(2,Math.min(91,(origin.x+end.x)/2+2)),y:Math.max(4,Math.min(96,(origin.y+end.y)/2-2)),fill:'#ffd166','font-size':'3'},label);
+      const ux=dx/length,uy=dy/length,short=Math.min(5,length*.2),tip={x:origin.x+ux*short,y:origin.y+uy*short};
+      add('path',{d:`M ${origin.x} ${origin.y} L ${tip.x} ${tip.y} M ${tip.x-ux*1.2-uy*.6} ${tip.y-uy*1.2+ux*.6} L ${tip.x} ${tip.y} L ${tip.x-ux*1.2+uy*.6} ${tip.y-uy*1.2-ux*.6}`,fill:'none',stroke:color,'stroke-width':'1.5','vector-effect':'non-scaling-stroke'});
+      add('text',{x:Math.max(1,Math.min(96,tip.x+1)),y:Math.max(3,Math.min(98,tip.y+1)),fill:color,'font-size':'1.8',class:'homography-axis-label'},label);
     }
-    p.forEach((point,i)=>add('circle',{cx:point.x,cy:point.y,r:i<4?'.9':'.6',fill:'#ffd166'}));
-    const world=h.world_points||[{x:0,y:h.pool_height_m},{x:h.pool_width_m,y:h.pool_height_m},{x:h.pool_width_m,y:0},{x:0,y:0}];
-    p.slice(0,4).forEach((point,i)=>add('text',{
-      x:Math.max(1,Math.min(68,point.x+1)),y:Math.max(4,Math.min(97,point.y+4)),fill:'#ffd166','font-size':'2.2'},
-      `X ${Number(world[i].x).toFixed(2)}, Y ${Number(world[i].y).toFixed(2)} m`));
-
-    add('text',{x:Math.max(2,Math.min(75,p[0].x+2)),y:Math.max(4,p[0].y-2),fill:'#ffd166','font-size':'2.6'},'호모그래피');
-    status.textContent=`호모그래피 표시 중 · 노란 점선: 보정 영역·X/Y축 · ROI는 별도 표시 · 기준점 ${p.length}개`;
+    p.forEach((point,i)=>add('circle',{cx:point.x,cy:point.y,r:i<4?'.5':'.35',fill:color}));
+    const zero=h.world_points?.[3]||{x:0,y:0};
+    add('text',{x:Math.max(1,Math.min(73,origin.x+2)),y:Math.max(3,Math.min(98,origin.y-2)),fill:color,'font-size':'1.7',class:'homography-axis-label'},
+      `X ${Number(zero.x).toFixed(2)}, Y ${Number(zero.y).toFixed(2)} m`);
+    status.textContent=`호모그래피 표시 중 · 감시 ROI와 보정 영역을 함께 표시 · 기준점 ${p.length}개`;
   }
   el('videoPanel').addEventListener('pointermove',event=>{
     const out=el('controlCoordinateReadout');

@@ -74,7 +74,7 @@ assert.equal(restarts,1);assert.equal(element('arucoId').value,'3','Saving homog
 assert.ok(element('homographyControlGroup').children.some(node=>node.textContent==='+X'));
 assert.ok(element('homographyControlGroup').children.some(node=>node.textContent==='+Y'));
 assert.match(element('homographyControlStatus').textContent,/호모그래피 표시 중/);
-assert.ok(element('homographyControlGroup').children.some(node=>node.textContent?.includes('X 0.00, Y 0.80 m')));
+assert.ok(element('homographyControlGroup').children.some(node=>node.textContent?.includes('X 0.00, Y 0.00 m')));
 element('videoPanel').handlers.pointermove({clientX:400,clientY:225});
 assert.match(element('controlCoordinateReadout').textContent,/X 0.400 m · Y 0.400 m/);
 assert.equal(element('controlCoordinateReadout').hidden,false);
