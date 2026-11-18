@@ -248,6 +248,8 @@ function updateModeBadge(){
   else { b.textContent='자율 모드'; }
 }
 function triggerEstop(){
+  void dgApi('/board-control/stop?site_id='+encodeURIComponent(new URLSearchParams(location.search).get('site')||''),{method:'POST'})
+    .catch(e=>pushLog('실제 보드 비상정지 전송 실패: '+e.message,'crit'));
   fetch("/api/boat/estop", {method:"POST"}).catch(e => pushLog("서버 비상정지 전송 실패: " + e.message, "crit"));
   state.estop=true; state.running=false; state.paused=false; state.cancellable=false;
   closeEventModal();
@@ -326,6 +328,8 @@ function startCancelWindow(){
 }
 function cancelDispatch(){
   if(!state.cancellable || state.estop || Date.now() >= cancelDeadline) return;
+  void dgApi('/board-control/stop?site_id='+encodeURIComponent(new URLSearchParams(location.search).get('site')||''),{method:'POST'})
+    .catch(e=>pushLog('실제 보드 출동 취소 전송 실패: '+e.message,'crit'));
   clearInterval(cancelTimer);
   state.cancellable = false;
   document.getElementById('cancelDispatchBtn').style.display='none';

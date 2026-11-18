@@ -23,10 +23,10 @@ def client(monkeypatch):
         with sessions() as session:
             yield session
 
-    main.app.dependency_overrides[get_db] = db
+    app.dependency_overrides[get_db] = db
     with TestClient(app) as client:
         yield client
-    main.app.dependency_overrides.clear()
+    app.dependency_overrides.clear()
     engine.dispose()
 
 
