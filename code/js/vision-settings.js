@@ -112,17 +112,17 @@
       if(text)node.textContent=text;group.appendChild(node);
     };
     const p=h.image_points,corners=p.slice(0,4),color='#ff73df';
-    add('polygon',{points:corners.map(v=>`${v.x},${v.y}`).join(' '),fill:'none',stroke:color,'stroke-width':'3','stroke-dasharray':'8,6','vector-effect':'non-scaling-stroke'});
+    add('polygon',{points:corners.map(v=>`${v.x},${v.y}`).join(' '),fill:'none',stroke:color,'stroke-width':'2.5','stroke-dasharray':'8,6','vector-effect':'non-scaling-stroke'});
     const origin=p[3];
     for(const [end,label] of [[p[2],'+X'],[p[0],'+Y']]){
       const dx=end.x-origin.x,dy=end.y-origin.y,length=Math.hypot(dx,dy);if(length<1e-6)continue;
       const ux=dx/length,uy=dy/length,short=Math.min(5,length*.2),tip={x:origin.x+ux*short,y:origin.y+uy*short};
       add('path',{d:`M ${origin.x} ${origin.y} L ${tip.x} ${tip.y} M ${tip.x-ux*1.2-uy*.6} ${tip.y-uy*1.2+ux*.6} L ${tip.x} ${tip.y} L ${tip.x-ux*1.2+uy*.6} ${tip.y-uy*1.2-ux*.6}`,fill:'none',stroke:color,'stroke-width':'1.5','vector-effect':'non-scaling-stroke'});
-      add('text',{x:Math.max(1,Math.min(96,tip.x+1)),y:Math.max(3,Math.min(98,tip.y+1)),fill:color,'font-size':'1.8',class:'homography-axis-label'},label);
+      add('text',{x:Math.max(1,Math.min(96,tip.x+1)),y:Math.max(3,Math.min(93,tip.y+1)),fill:color,'font-size':'1.8',class:'homography-axis-label'},label);
     }
     p.forEach((point,i)=>add('circle',{cx:point.x,cy:point.y,r:i<4?'.5':'.35',fill:color}));
     const zero=h.world_points?.[3]||{x:0,y:0};
-    add('text',{x:Math.max(1,Math.min(73,origin.x+2)),y:Math.max(3,Math.min(98,origin.y-2)),fill:color,'font-size':'1.7',class:'homography-axis-label'},
+    add('text',{x:Math.max(1,Math.min(73,origin.x+2)),y:Math.max(3,Math.min(90,origin.y-2)),fill:color,'font-size':'1.7',class:'homography-axis-label'},
       `X ${Number(zero.x).toFixed(2)}, Y ${Number(zero.y).toFixed(2)} m`);
     status.textContent=`호모그래피 표시 중 · 감시 ROI와 보정 영역을 함께 표시 · 기준점 ${p.length}개`;
   }

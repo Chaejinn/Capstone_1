@@ -295,7 +295,7 @@ body{overflow-x:auto!important}
 #signalWideHost[hidden],#signalSideHost[hidden]{display:none;}
 
 /* Persistent, compact legend; solid ROI and dashed calibration remain distinct even when coincident. */
-#roiPolyControl,.video-panel.camera-connected #roiPolyControl{stroke:#34f5d0;stroke-width:3;vector-effect:non-scaling-stroke;stroke-dasharray:none;fill:rgba(52,245,208,.025);filter:drop-shadow(0 0 1px #00111d);}
+#roiPolyControl,.video-panel.camera-connected #roiPolyControl{stroke:#34f5d0;stroke-width:4;vector-effect:non-scaling-stroke;stroke-dasharray:none;fill:rgba(52,245,208,.025);filter:drop-shadow(0 0 1px #00111d);}
 #homographyControlGroup{filter:drop-shadow(0 0 1px #00111d);}
 .homography-axis-label{paint-order:stroke;stroke:#00111d;stroke-width:.35;stroke-linejoin:round;}
 .monitoring-legend{position:absolute;z-index:6;bottom:10px;left:12px;display:flex;align-items:center;gap:10px;padding:4px 6px;border-radius:3px;background:rgba(0,13,25,.8);font-size:10px;line-height:1.2;pointer-events:none;}
@@ -303,5 +303,5 @@ body{overflow-x:auto!important}
 .legend-swatch{display:inline-block;width:8px;height:8px;flex:none;}
 .legend-roi{background:#34f5d0;}
 .legend-homography{background:#ff73df;}
-.video-panel::after{bottom:35px;font-size:9px;}
+.video-panel::after{display:none;}
 #controlCoordinateReadout{bottom:56px;}
