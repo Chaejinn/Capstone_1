@@ -14,7 +14,7 @@ ZIP의 파일별 원본 해시는 `handoff-manifest.json`에 있습니다.
 | `scripts/publish_pose.py`, `src/web/` | 카메라 PC → 웹 관측 전송 |
 | `configs/` | 이 도구에서 실제 사용하는 최소 설정 |
 | `calibration/` | 실제 카메라 보정 파일; 초기 상태는 미보정 |
-| `reference/` | ZIP의 전체 파이프라인 설정·잘못된 기존 보정값 보존본; 실행에 사용하지 않음 |
+| `tests/fixtures/handoff-calibration/` | 잘못된 원본 보정값을 거부하는 검사 전용 예시; 실제 보정에 사용하지 않음 |
 | `outputs/`, `.venv/` | 생성물·로컬 환경; Git/Vercel 제외 |
 | `tests/` | 실제 카메라 없이 합성 마커·좌표·저장 동작 검증 |
 

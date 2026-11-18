@@ -3,7 +3,7 @@ import http.client
 import threading
 import unittest
 
-from scripts.model_stream import LatestFrame, make_server
+from Ai파일.tools.model_stream import LatestFrame, make_server
 
 
 class StreamTests(unittest.TestCase):

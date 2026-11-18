@@ -1,2 +1,0 @@
-# Compatibility entrypoint; canonical AI dependencies are grouped under Ai파일/.
--r Ai파일/requirements-local-ai.txt

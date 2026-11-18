@@ -12,5 +12,5 @@
 AI 자료와 기존 연결 기록은 원래 위치를 유지합니다.
 
 - [AI 담당자 파일 안내](../Ai파일/README.md)
-- [AI 서버·웹 연결 기록](../MODEL_STREAM.md)
-- [로컬 AI 결과 수신 안내](../EDGE_INTEGRATION.md)
+- [AI 서버·웹 연결 기록](../Ai파일/docs/모델연결.md)
+- [로컬 AI 결과 수신 안내](../Ai파일/docs/로컬결과수신.md)

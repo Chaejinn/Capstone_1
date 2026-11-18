@@ -13,7 +13,5 @@ for source,target in [
     ('Ai파일/services/tracking/modal_app.py','tracking_app.py'),
 ]:
     destination=STAGE/target
-    backup=destination.with_suffix(destination.suffix+'.before-web-configuration')
-    if destination.exists() and not backup.exists():shutil.copy2(destination,backup)
     shutil.copy2(ROOT/source,destination)
     print(target)

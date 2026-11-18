@@ -48,7 +48,7 @@ class MeasurementTests(unittest.TestCase):
 
     def test_handoff_bad_quad_is_rejected_and_template_stays_uncalibrated(self):
         with self.assertRaises(HomographyConfigError):
-            load_homography(ROOT/'reference/calibration/homography.yaml')
+            load_homography(ROOT/'tests/fixtures/handoff-calibration/homography.yaml')
         template=load_homography(ROOT/'calibration/homography.yaml')
         self.assertIsNone(template.matrix);self.assertEqual(template.reason,'UNCALIBRATED')
 

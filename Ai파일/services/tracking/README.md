@@ -47,7 +47,7 @@ ArUco는 호모그래피 없이도 마커 ID·영상 좌표·픽셀 헤딩을 �
 바꿔서 동일한 컨텍스트라고 간주하면 안 됩니다.
 
 ```sh
-python3 scripts/prepare-tracking.py
+python3 Ai파일/tools/prepare-tracking.py
 # 기존 Vercel VISION_SERVICE_API_KEY 값을 VISION_INGEST_API_KEY 환경변수로 전달한 환경에서:
 cd Ai파일/local-model/modal-moondream2-deploy
 ../.venv-modal/bin/python -m modal deploy tracking_app.py

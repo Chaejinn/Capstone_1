@@ -23,3 +23,10 @@ Ai파일/edge-vision/calibration/*.tmp
 /dist/
 .pytest_cache/
 .venv-bridge/
+
+# AI 모델과 실행 환경은 로컬에 보관; 안내서만 공유
+/Ai파일/models/*
+!/Ai파일/models/README.md
+!/Ai파일/local-model/
+/Ai파일/local-model/*
+!/Ai파일/local-model/README.md

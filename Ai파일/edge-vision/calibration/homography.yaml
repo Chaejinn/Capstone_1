@@ -1,5 +1,5 @@
 # Uncalibrated template. Physical measurements must be made on the actual camera.
-# Handoff points/matrix are retained under reference/calibration and are NOT used.
+# Handoff points/matrix are retained under tests/fixtures/handoff-calibration and are NOT used.
 frame_id: pool-01
 calibration_id: null
 pool_width_m: 0.30

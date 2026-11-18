@@ -35,13 +35,12 @@ python -m uvicorn app:app --host 127.0.0.1 --port 8000
 - `requirements.txt`: 웹 서버에 필요한 Python 패키지 목록입니다.
 - `vercel.json`, `.vercelignore`: Vercel 배포 설정입니다.
 - `.gitignore`: Git에 올리지 않을 파일 목록입니다.
-- `requirements-local-ai.txt`: AI 담당 폴더의 패키지 목록으로 연결하는 기존 호환 파일입니다.
-- [MODEL_STREAM.md](MODEL_STREAM.md), [EDGE_INTEGRATION.md](EDGE_INTEGRATION.md): 기존 AI 연결 기록입니다. AI 폴더에서 참조하므로 경로를 유지합니다.
+- AI 실행·모델·연결 기록은 [Ai파일/](Ai파일/README.md) 안에서 관리합니다.
 
 ## 꼭 알아 두세요
 
 - 실제 사용하는 화면 원본은 `code/`입니다. `public/`은 배포할 때 자동 생성합니다.
-- `Ai파일/`의 모델·도구·받은 자료는 이번 정리에서 변경하지 않았습니다. 큰 모델과 로컬 가상환경은 Git에 포함되지 않을 수 있습니다.
+- `Ai파일/` 내부도 용도별로 정리했습니다. 모델·필수 소스는 보존했으며 큰 모델과 로컬 가상환경은 Git에 포함되지 않습니다.
 - 환경변수 파일, 로컬 DB, 가상환경은 개인 실행 자료입니다. 공유하거나 임의로 지우지 마세요.
 - 현재 USB 브릿지의 검증 범위는 **10% 추진, 최대 0.8초 직진과 정지**입니다. 전체 자율 구조·복귀 완료를 의미하지 않습니다.
 

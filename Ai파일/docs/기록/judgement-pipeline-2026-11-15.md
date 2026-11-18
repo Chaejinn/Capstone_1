@@ -4,7 +4,7 @@
 
 ## 추가한 자동 시험
 
-[시험 코드](../services/tracking/test_judgement_pipeline.py)는 FastAPI의 실제 스트림 생성·이미지 업로드·결과 조회·종료 API, 실제 OpenCV JPEG 디코딩, 실제 PersonTracker/ByteTrack, 운영 BrowserStream/DrowningGate를 사용합니다. RF-DETR·Moondream 응답만 고정한 합성 응답입니다. 운영 서버나 하드웨어에는 요청하지 않습니다.
+[시험 코드](../../services/tracking/test_judgement_pipeline.py)는 FastAPI의 실제 스트림 생성·이미지 업로드·결과 조회·종료 API, 실제 OpenCV JPEG 디코딩, 실제 PersonTracker/ByteTrack, 운영 BrowserStream/DrowningGate를 사용합니다. RF-DETR·Moondream 응답만 고정한 합성 응답입니다. 운영 서버나 하드웨어에는 요청하지 않습니다.
 
 1. 동일 대상의 익수 점수 0.8 이상은 15번째 연속 분석 프레임에서 확정됩니다. 최초 확정 이벤트는 한 번만 생성됩니다.
 2. 탐지 신뢰도 0.99라도 익수 점수가 없거나 0.79이면 확정되지 않습니다.
